@@ -5,9 +5,6 @@ package client
 import (
 	"fmt"
 	"net"
-	"syscall"
-
-	"golang.org/x/sys/unix"
 )
 
 type ClientProxyListener struct {
@@ -49,15 +46,6 @@ func NewClientProxyListener(network string, laddr *net.TCPAddr) (net.Listener, e
 		return nil, &net.OpError{Op: "ClientListener", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("get file descriptor: %s", err)}
 	}
 	defer fileDescriptorSource.Close()
-
-	//Make the port transparent so the gateway can see the real origin IP address (invisible proxy within satellite environment)
-	if err = syscall.SetsockoptInt(int(fileDescriptorSource.Fd()), syscall.IPPROTO_IP, 1, 1); err != nil {
-		return nil, &net.OpError{Op: "listen", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("set socket option: IP_TRANSPARENT: %s", err)}
-	}
-
-	if err = syscall.SetsockoptInt(int(fileDescriptorSource.Fd()), syscall.IPPROTO_IP, unix.TCP_FASTOPEN, 1); err != nil {
-		return nil, &net.OpError{Op: "listen", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("set socket option: TCP_FASTOPEN: %s", err)}
-	}
 
 	//return a derived TCP listener object with TCProxy support
 	return &ClientProxyListener{base: listener}, nil
