@@ -19,6 +19,7 @@ If you wish to route traffic bi-directionally (e.g. correctly optimize incoming 
 The client must be configured to route all incoming TCP traffic to the QPEP server. In *nix systems you can do this using nftables. QPEP by default is configured to accept incoming client connections on port 8080.
 ```bash
 $ sysctl -w net.ipv4.ip_forward=1
+$ sysctl -w net.core.rmem_max=2500000
 $ nftables -f nftables.conf
 $ ip rule add fwmark 0x233 lookup 100
 $ ip route add local 0.0.0.0/0 dev lo table 100
@@ -35,11 +36,13 @@ $ sysctl -w net.ipv4.ip_forward=1
 ### Launching the QPEP Client
 To run QPEP in client mode once you've set the appropriate IP tables rules:
 ```bash
+$ sysctl -w net.core.rmem_max=2500000
 $ ./qpep -client -gateway [IP of QPEP server]
 ```
 ### Launching the QPEP Server
 To run QPEP in server mode
 ```bash
+$ sysctl -w net.core.rmem_max=2500000
 $ ./qpep
 ```
 ### Changing Further QUIC Parameters
