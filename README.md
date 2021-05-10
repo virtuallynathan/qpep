@@ -1,5 +1,5 @@
 # qpep
-Fixing the go version of qpep
+Working on improving the Go standalone implementation of qpep, improving documentation
 
 
 # Using Standalone QPEP
@@ -16,14 +16,16 @@ You will need at least two machines and ideally three, a QPEP client and a QPEP 
 If you wish to route traffic bi-directionally (e.g. correctly optimize incoming ssh connections to the QPEP client workstation from the internet) you will need to run a QPEP client and a QPEP server on both sides of the connection.
 
 ### Client Setup
-The client must be configured to route all incoming TCP traffic to the QPEP server. In *nix systems you can do this using iptables. QPEP by default is configured to accept incoming client connections on port 8080
+The client must be configured to route all incoming TCP traffic to the QPEP server. In *nix systems you can do this using nftables. QPEP by default is configured to accept incoming client connections on port 8080.
 ```bash
 $ sysctl -w net.ipv4.ip_forward=1
-$ iptables -A PREROUTING -t mangle -p tcp -i [network interface to server] -j TPROXY --on-port 8080 --tproxy-mark 1
-$ iptables -A PREROUTING -t mangle -p tcp -i [network interface to workstation] -j TPROXY --on-port 8080 --tproxy-mark 1
-$ ip rule add fwmark 1 lookup 100
+$ nftables -f nftables.conf
+$ ip rule add fwmark 0x233 lookup 100
 $ ip route add local 0.0.0.0/0 dev lo table 100
 ```
+
+A systemd service script is included with helpful start/stop/reload options. IPs/prefixes may be excluded from proxying by editing the list in nftables.conf. 
+
 ### Server Setup
 No special routing setup is required for the QPEP server. It listens by default on UDP port 4242. If you would like, you can enable ip forwarding which, depending on the underlying network implementation, may allow for fully transparent proxy implementation.
 ```bash
