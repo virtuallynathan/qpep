@@ -19,7 +19,7 @@ import (
 var (
 	proxyListener       net.Listener
 	ClientConfiguration = ClientConfig{ListenHost: "0.0.0.0", ListenPort: 8080,
-		GatewayHost: "198.18.0.254", GatewayPort: 4242,
+		GatewayHost: "198.18.0.254", GatewayPort: 443,
 		QuicStreamTimeout: 2, MultiStream: shared.QuicConfiguration.MultiStream,
 		ConnectionRetries: 3,
 		IdleTimeout:       time.Duration(300) * time.Second}
@@ -90,7 +90,7 @@ func handleTCPConn(tcpConn net.Conn) {
 			quicStream, err = quicSession.OpenStream()
 			// if we weren't able to open a quicStream on that session (usually inactivity timeout), we can try to open a new session
 			if err != nil {
-				log.Printf("Unable to open new stream on existing QUIC session: %s\n")
+				log.Printf("Unable to open new stream on existing QUIC session: %s\n", err)
 				quicStream = nil
 			} else {
 				log.Printf("Opened a new stream: %d", quicStream.StreamID())
@@ -123,7 +123,10 @@ func handleTCPConn(tcpConn net.Conn) {
 
 	//Set our custom header to the QUIC session so the server can generate the correct TCP handshake on the other side
 	sessionHeader := shared.QpepHeader{SourceAddr: tcpConn.RemoteAddr().(*net.TCPAddr), DestAddr: tcpConn.LocalAddr().(*net.TCPAddr)}
-	quicStream.Write(sessionHeader.ToBytes())
+	_, err := quicStream.Write(sessionHeader.ToBytes())
+	if err != nil {
+		log.Printf("Error writing to quic stream: %s", err.Error())
+	}
 	log.Printf("Sent QUIC header to server")
 
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
@@ -164,7 +167,7 @@ func handleTCPConn(tcpConn net.Conn) {
 func openQuicSession() (quic.Session, error) {
 	var err error
 	var session quic.Session
-	tlsConf := &tls.Config{InsecureSkipVerify: true, NextProtos: []string{"qpep-demo"}}
+	tlsConf := &tls.Config{InsecureSkipVerify: true, NextProtos: []string{"qpep"}}
 	gatewayPath := ClientConfiguration.GatewayHost + ":" + strconv.Itoa(ClientConfiguration.GatewayPort)
 	quicClientConfig := QuicClientConfiguration
 	for i := 0; i < ClientConfiguration.ConnectionRetries; i++ {
@@ -178,22 +181,4 @@ func openQuicSession() (quic.Session, error) {
 
 	log.Printf("Max Retries Exceeded. Unable to Open QUIC Session: %s\n", err)
 	return nil, err
-}
-
-func openQuicStream(session quic.Session) (quic.Stream, error) {
-
-	stream, err := session.OpenStreamSync(context.Background())
-	if err != nil {
-
-		//If the current tunnel has timed out, open a new tunnel for traffic
-		if err.Error() == "NO_ERROR: No recent network activity" {
-			quicSession, err = openQuicSession()
-			stream, err = quicSession.OpenStreamSync(context.Background())
-		} else {
-			log.Printf("Error opening quic stream: %s", err)
-			return nil, err
-		}
-	}
-
-	return stream, nil
 }

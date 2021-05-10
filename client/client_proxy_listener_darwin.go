@@ -50,22 +50,9 @@ func NewClientProxyListener(network string, laddr *net.TCPAddr) (net.Listener, e
 	}
 	defer fileDescriptorSource.Close()
 
-	//Make the port transparent so the gateway can see the real origin IP address (invisible proxy within satellite environment)
-	if err = syscall.SetsockoptInt(int(fileDescriptorSource.Fd()), syscall.IPPROTO_IP, syscall.SOL_SOCKET, 1); err != nil {
-		return nil, &net.OpError{Op: "listen", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("set socket option: IP_TRANSPARENT: %s", err)}
-	}
-
 	if err = syscall.SetsockoptInt(int(fileDescriptorSource.Fd()), syscall.IPPROTO_TCP, unix.TCP_FASTOPEN, 1); err != nil {
 		return nil, &net.OpError{Op: "listen", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("set socket option: TCP_FASTOPEN: %s", err)}
 	}
-
-	//Find associated file descriptor for listener to set socket options on
-	fileDescriptorSource, err := listener.File()
-	if err != nil {
-		return nil, &net.OpError{Op: "ClientListener", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("get file descriptor: %s", err)}
-	}
-	defer fileDescriptorSource.Close()
-
 	//return a derived TCP listener object with TCProxy support
 	return &ClientProxyListener{base: listener}, nil
 }

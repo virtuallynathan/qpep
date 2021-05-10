@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	serverConfig = ServerConfig{ListenHost: "0.0.0.0", ListenPort: 4242}
+	serverConfig = ServerConfig{ListenHost: "0.0.0.0", ListenPort: 443}
 	quicListener quic.Listener
 	quicSession  quic.Session
 )
@@ -103,7 +103,10 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	streamWait.Add(2)
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
 		_, err = io.Copy(dst, src)
-		dst.SetLinger(3)
+		err1 := dst.SetLinger(3)
+		if err1 != nil {
+			log.Printf("error on setLinger: %s", err1)
+		}
 		dst.Close()
 		if err != nil {
 			log.Printf("Error on Copy %s", err)
@@ -113,7 +116,10 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	streamTCPtoQUIC := func(dst quic.Stream, src *net.TCPConn) {
 		_, err = io.Copy(dst, src)
 		log.Printf("Finished Copying TCP Conn %s->%s", src.LocalAddr().String(), src.RemoteAddr().String())
-		src.SetLinger(3)
+		err1 := src.SetLinger(3)
+		if err1 != nil {
+			log.Printf("error on setLinger: %s", err1)
+		}
 		src.Close()
 		if err != nil {
 			log.Printf("Error on Copy %s", err)
@@ -132,7 +138,7 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 }
 
 func generateTLSConfig() *tls.Config {
-	key, err := rsa.GenerateKey(rand.Reader, 1024)
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}
@@ -150,6 +156,6 @@ func generateTLSConfig() *tls.Config {
 	}
 	return &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
-		NextProtos:   []string{"qpep-demo"},
+		NextProtos:   []string{"qpep"},
 	}
 }
