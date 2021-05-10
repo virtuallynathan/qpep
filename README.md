@@ -1,5 +1,5 @@
 # qpep
-Working on improving the Go standalone implementation of qpep, improving documentation
+Working on improving the Go standalone implementation of qpep, improving documentation. Original full repo: https://github.com/ssloxford/qpep
 
 
 # Using Standalone QPEP
