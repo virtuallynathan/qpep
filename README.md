@@ -1,6 +1,9 @@
 # qpep
 Working on improving the Go standalone implementation of qpep, improving documentation. Original full repo: https://github.com/ssloxford/qpep
 
+Basic testing:
+* Ziply Fiber Gigabit in Seattle pulling 1GB test file from DigitalOcean AMS3: ~1.6MB/s
+* Ziply Fiber Gigabit in Seattle pulling 1GB test file via qpep running in DigitalOcean AMS3, grabbing 1GB file from AMS3: 10-25MB/s. Slows down over the course of the download. 
 
 # Using Standalone QPEP
  
