@@ -31,10 +31,8 @@ $ ip route add local 0.0.0.0/0 dev lo table 100
 A systemd service script is included with helpful start/stop/reload options. IPs/prefixes may be excluded from proxying by editing the list in nftables.conf. 
 
 ### Server Setup
-No special routing setup is required for the QPEP server. It listens by default on UDP port 4242. If you would like, you can enable ip forwarding which, depending on the underlying network implementation, may allow for fully transparent proxy implementation.
-```bash
-$ sysctl -w net.ipv4.ip_forward=1
-```
+No special routing setup is required for the QPEP server. It listens by default on UDP port 443.
+
 ## Running QPEP
 ### Launching the QPEP Client
 To run QPEP in client mode once you've set the appropriate IP tables rules:
@@ -43,13 +41,14 @@ $ sysctl -w net.core.rmem_max=2500000
 $ ./qpep -client -gateway [IP of QPEP server]
 ```
 ### Launching the QPEP Server
-To run QPEP in server mode
+To run QPEP in server mode.  Enabliong IP fowarding should allow for a fully transparent proxy implementation.
 ```bash
+$ sysctl -w net.ipv4.ip_forward=1
 $ sysctl -w net.core.rmem_max=2500000
 $ ./qpep
 ```
 ### Changing Further QUIC Parameters
-QPEP comes with a forked and modified version of the quic-go library which allows for altering some basic constants in the default QUIC implementation. These are provided as command-line flags and can be implemented on both the QPEP server and QPEP client. You can use ```qpep -h``` to see basic help output. The available options are:
+QPEP comes with a forked and modified version of the quic-go library (virtuallynathan note: Is this the case still?)  which allows for altering some basic constants in the default QUIC implementation. These are provided as command-line flags and can be implemented on both the QPEP server and QPEP client. You can use ```qpep -h``` to see basic help output. The available options are:
 * ```-acks [int]``` Sets the number of ack-eliciting packets per ack. The default ratio is 10:1.
 * ```-congestion [int]``` Sets the size of the initial QUIC congestion window in number of QUIC packets. Defaults to 4.
 * ```-multistream [bool]``` Enables multiplexing QUIC streams inside a meta-session. Default is true.
@@ -57,7 +56,7 @@ QPEP comes with a forked and modified version of the quic-go library which allow
 * ```-varAckDelay [float]``` Variable number of miliseconds to try and hold back an ack for decimation, as multiple of RTT. Default is 0.25.
 * ```-minBeforeDecimation [int]``` Minimum number of packets sent before initiating any ack decimation. Default is 100.
 * ```-client [bool]``` runs QPEP in client mode. Default is false.
-* ```-gateway [ip]``` sets the gateway address for a QPEP client to connect to. Default is 192.18.0.254 but you will probably need to set it yourself based on your network config.
+* ```-gateway [ip]``` sets the gateway address for a QPEP client to connect to. You'll need to provide this. 
 
 
 ## References in Publications 
