@@ -17,15 +17,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lucas-clemente/quic-go"
 	"github.com/virtuallynathan/qpep/client"
 	"github.com/virtuallynathan/qpep/shared"
+
+	"github.com/lucas-clemente/quic-go"
 )
 
 var (
 	serverConfig = ServerConfig{ListenHost: "0.0.0.0", ListenPort: 443}
 	quicListener quic.Listener
-	quicSession  quic.Connection
+	quicSession  quic.Session
 )
 
 type ServerConfig struct {
@@ -65,7 +66,7 @@ func ListenQuicSession() {
 	}
 }
 
-func ListenQuicConn(quicSession quic.Connection) {
+func ListenQuicConn(quicSession quic.Session) {
 	for {
 		stream, err := quicSession.AcceptStream(context.Background())
 		if err != nil {

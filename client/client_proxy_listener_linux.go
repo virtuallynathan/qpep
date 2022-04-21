@@ -59,9 +59,6 @@ func NewClientProxyListener(network string, laddr *net.TCPAddr) (net.Listener, e
 		return nil, &net.OpError{Op: "listen", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("set socket option: TCP_FASTOPEN: %s", err)}
 	}
 
-	if err = syscall.SetsockoptInt(int(fileDescriptorSource.Fd()), syscall.SOL_TCP, unix.TCP_NODELAY, 1); err != nil {
-		return nil, &net.OpError{Op: "listen", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("set socket option: TCP_NODELAY: %s", err)}
-	}
 	//return a derived TCP listener object with TCProxy support
 	return &ClientProxyListener{base: listener}, nil
 }
