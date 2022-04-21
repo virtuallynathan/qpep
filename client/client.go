@@ -2,6 +2,7 @@ package client
 
 import (
 	"crypto/tls"
+	"github.com/lucas-clemente/quic-go"
 	"io"
 	"log"
 	"net"
@@ -11,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lucas-clemente/quic-go"
 	"github.com/virtuallynathan/qpep/shared"
 	"golang.org/x/net/context"
 )
@@ -23,7 +23,7 @@ var (
 		QuicStreamTimeout: 2, MultiStream: shared.QuicConfiguration.MultiStream,
 		ConnectionRetries: 3,
 		IdleTimeout:       time.Duration(300) * time.Second}
-	quicSession             quic.Session
+	quicSession             quic.Connection
 	QuicClientConfiguration = quic.Config{
 		MaxIncomingStreams: 40000,
 	}
@@ -130,7 +130,9 @@ func handleTCPConn(tcpConn net.Conn) {
 	log.Printf("Sent QUIC header to server")
 
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
-		_, err := io.Copy(dst, src)
+		dst.ReadFrom(src)
+		//written, err := io.Copy(dst, src)
+		//log.Printf("Sent %s bytes on Stream ID %d.", strconv.FormatInt(written, 10), quicStream.StreamID())
 		dst.SetLinger(3)
 		dst.Close()
 		//src.CancelRead(1)
@@ -164,9 +166,9 @@ func handleTCPConn(tcpConn net.Conn) {
 	log.Printf("Done sending data on %d", quicStream.StreamID())
 }
 
-func openQuicSession() (quic.Session, error) {
+func openQuicSession() (quic.Connection, error) {
 	var err error
-	var session quic.Session
+	var session quic.Connection
 	tlsConf := &tls.Config{InsecureSkipVerify: true, NextProtos: []string{"qpep"}}
 	gatewayPath := ClientConfiguration.GatewayHost + ":" + strconv.Itoa(ClientConfiguration.GatewayPort)
 	quicClientConfig := QuicClientConfiguration
