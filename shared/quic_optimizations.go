@@ -2,6 +2,7 @@ package shared
 
 import (
 	"flag"
+	"os"
 )
 
 type QuicConfig struct {
@@ -32,6 +33,11 @@ func init() {
 	gatewayFlag := flag.String("gateway", "198.18.0.254", "IP address of gateway running qpep")
 
 	flag.Parse()
+	if !flag.Parsed() {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	QuicConfiguration = QuicConfig{
 		AckElicitingPacketsBeforeAck:   *ackElicitingFlag,
 		AckDecimationDenominator:       *ackDecimationFlag,

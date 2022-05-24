@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/virtuallynathan/qpep/client"
-	"github.com/virtuallynathan/qpep/shared"
+	"github.com/parvit/qpep/client"
+	"github.com/parvit/qpep/shared"
 
 	"github.com/lucas-clemente/quic-go"
 )

@@ -1,4 +1,4 @@
-module github.com/virtuallynathan/qpep
+module github.com/parvit/qpep
 
 go 1.16
 

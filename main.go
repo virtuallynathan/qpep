@@ -6,12 +6,16 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/virtuallynathan/qpep/client"
-	"github.com/virtuallynathan/qpep/server"
-	"github.com/virtuallynathan/qpep/shared"
+	"github.com/parvit/qpep/client"
+	"github.com/parvit/qpep/server"
+	"github.com/parvit/qpep/shared"
+
+	"github.com/parvit/qpep/windivert"
 )
 
 func main() {
+	log.Println(windivert.InitializeWinDivertEngine())
+
 	client.ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 
 	if shared.QuicConfiguration.ClientFlag {

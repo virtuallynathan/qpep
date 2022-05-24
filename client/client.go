@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
-	"github.com/virtuallynathan/qpep/shared"
+	"github.com/parvit/qpep/shared"
 	"golang.org/x/net/context"
 )
 
