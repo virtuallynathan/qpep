@@ -5,8 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
-	"os/signal"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
@@ -40,44 +39,67 @@ type ClientConfig struct {
 	ConnectionRetries int
 }
 
-func RunClient() {
+func RunClient(ctx context.Context) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+		if proxyListener != nil {
+			proxyListener.Close()
+		}
+	}()
 	log.Println("Starting TCP-QPEP Tunnel Listener")
 	log.Printf("Binding to TCP %s:%d", ClientConfiguration.ListenHost, ClientConfiguration.ListenPort)
 	var err error
 	proxyListener, err = NewClientProxyListener("tcp", &net.TCPAddr{IP: net.ParseIP(ClientConfiguration.ListenHost),
 		Port: ClientConfiguration.ListenPort})
 	if err != nil {
-		log.Fatalf("Encountered error when binding client proxy listener: %s", err)
+		log.Printf("Encountered error when binding client proxy listener: %s", err)
+		return
 	}
-
-	defer proxyListener.Close()
 
 	go ListenTCPConn()
 
-	interruptListener := make(chan os.Signal)
-	signal.Notify(interruptListener, os.Interrupt)
-	<-interruptListener
-	log.Println("Exiting...")
-	os.Exit(1)
+	for {
+		select {
+		case <-ctx.Done():
+			proxyListener.Close()
+			return
+		case <-time.After(10 * time.Millisecond):
+			continue
+		}
+	}
 }
 
 func ListenTCPConn() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	for {
 		conn, err := proxyListener.Accept()
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
 				log.Printf("Temporary error when accepting connection: %s", netErr)
 			}
-			log.Fatalf("Unrecoverable error while accepting connection: %s", err)
+			log.Printf("Unrecoverable error while accepting connection: %s", err)
 			return
 		}
 
 		go handleTCPConn(conn)
 	}
-
 }
 
 func handleTCPConn(tcpConn net.Conn) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	log.Printf("Accepting TCP connection from %s with destination of %s", tcpConn.RemoteAddr().String(), tcpConn.LocalAddr().String())
 	defer tcpConn.Close()
 	var quicStream quic.Stream = nil

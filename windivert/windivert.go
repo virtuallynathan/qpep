@@ -6,6 +6,17 @@ package windivert
 //#include "windivert_wrapper.h"
 import "C"
 
+const (
+	DIVERT_OK                  = 0
+	DIVERT_ERROR_NOTINITILIZED = 1
+	DIVERT_ERROR_ALREADY_INIT  = 2
+	DIVERT_ERROR_FAILED        = 3
+)
+
 func InitializeWinDivertEngine() int {
 	return int(C.InitializeWinDivertEngine())
+}
+
+func CloseWinDivertEngine() int {
+	return int(C.CloseWinDivertEngine())
 }

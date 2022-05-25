@@ -11,8 +11,7 @@ import (
 	"log"
 	"math/big"
 	"net"
-	"os"
-	"os/signal"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
@@ -34,27 +33,47 @@ type ServerConfig struct {
 	ListenPort int
 }
 
-func RunServer() {
+func RunServer(ctx context.Context) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+		if quicListener != nil {
+			quicListener.Close()
+		}
+	}()
+
 	listenAddr := serverConfig.ListenHost + ":" + strconv.Itoa(serverConfig.ListenPort)
 	log.Printf("Opening QPEP Server on: %s", listenAddr)
 	var err error
 	quicListener, err = quic.ListenAddr(listenAddr, generateTLSConfig(), &client.QuicClientConfiguration)
 	if err != nil {
-		log.Fatalf("Encountered error while binding QUIC listener: %s", err)
+		log.Printf("Encountered error while binding QUIC listener: %s", err)
 		return
 	}
 	defer quicListener.Close()
 
 	go ListenQuicSession()
 
-	interruptListener := make(chan os.Signal)
-	signal.Notify(interruptListener, os.Interrupt)
-	<-interruptListener
-	log.Println("Exiting...")
-	os.Exit(1)
+	for {
+		select {
+		case <-ctx.Done():
+			quicListener.Close()
+			return
+		case <-time.After(10 * time.Millisecond):
+			continue
+		}
+	}
 }
 
 func ListenQuicSession() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	for {
 		var err error
 		quicSession, err = quicListener.Accept(context.Background())
@@ -67,6 +86,12 @@ func ListenQuicSession() {
 }
 
 func ListenQuicConn(quicSession quic.Session) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	for {
 		stream, err := quicSession.AcceptStream(context.Background())
 		if err != nil {
@@ -82,6 +107,12 @@ func ListenQuicConn(quicSession quic.Session) {
 }
 
 func HandleQuicStream(stream quic.Stream) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	qpepHeader, err := shared.GetQpepHeader(stream)
 	if err != nil {
 		log.Printf("Unable to find QPEP header: %s", err)
@@ -91,6 +122,12 @@ func HandleQuicStream(stream quic.Stream) {
 }
 
 func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	log.Printf("Opening TCP Connection to %s\n", qpepHeader.DestAddr.String())
 	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), time.Duration(10)*time.Second)
 	if err != nil {

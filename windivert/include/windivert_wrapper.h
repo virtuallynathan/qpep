@@ -14,4 +14,14 @@
 
 #include "windivert.h"
 
+#define FILTERFMT "outbound and !loopback and tcp and remoteAddr == %s and remotePort == %d"
+
+enum {
+  DIVERT_OK = 0,
+  DIVERT_ERROR_NOTINITILIZED = 1,
+  DIVERT_ERROR_ALREADY_INIT  = 2,
+  DIVERT_ERROR_FAILED = 3,
+};
+
 extern int InitializeWinDivertEngine();
+extern int CloseWinDivertEngine();
