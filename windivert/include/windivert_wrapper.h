@@ -23,5 +23,6 @@ enum {
   DIVERT_ERROR_FAILED = 3,
 };
 
-extern int InitializeWinDivertEngine();
+extern int InitializeWinDivertEngine(char* address, int port, int numThreads);
 extern int CloseWinDivertEngine();
+extern void logMessageToGo( char* message );

@@ -23,7 +23,7 @@ func main() {
 			debug.PrintStack()
 		}
 	}()
-	log.Println(windivert.InitializeWinDivertEngine())
+	log.Println(windivert.InitializeWinDivertEngine("192.168.1.110", 9090, 4))
 
 	client.ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 

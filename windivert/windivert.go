@@ -6,6 +6,10 @@ package windivert
 //#include "windivert_wrapper.h"
 import "C"
 
+import (
+	"log"
+)
+
 const (
 	DIVERT_OK                  = 0
 	DIVERT_ERROR_NOTINITILIZED = 1
@@ -13,10 +17,15 @@ const (
 	DIVERT_ERROR_FAILED        = 3
 )
 
-func InitializeWinDivertEngine() int {
-	return int(C.InitializeWinDivertEngine())
+func InitializeWinDivertEngine(address string, port, numThreads int) int {
+	return int(C.InitializeWinDivertEngine(C.CString(address), C.int(port), C.int(numThreads)))
 }
 
 func CloseWinDivertEngine() int {
 	return int(C.CloseWinDivertEngine())
+}
+
+//export logMessageToGo
+func logMessageToGo(msg *C.char) {
+	log.Println(C.GoString(msg))
 }
