@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -23,14 +22,21 @@ func main() {
 			debug.PrintStack()
 		}
 	}()
-	log.Println(windivert.InitializeWinDivertEngine("192.168.1.110", 9090, 4))
+
+	log.SetFlags(log.Ltime | log.Lmicroseconds)
 
 	client.ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
 	if shared.QuicConfiguration.ClientFlag {
-		fmt.Println("Running Client")
+		log.Println("Running Client")
+		windivert.EnableDiverterLogging(false)
+
+		if windivert.InitializeWinDivertEngine(9443, 1) != windivert.DIVERT_OK {
+			windivert.CloseWinDivertEngine()
+			os.Exit(1)
+		}
 		go client.RunClient(execContext)
 	} else {
 		go server.RunServer(execContext)

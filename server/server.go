@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	serverConfig = ServerConfig{ListenHost: "0.0.0.0", ListenPort: 443}
+	serverConfig = ServerConfig{ListenHost: "192.168.1.10", ListenPort: 443}
 	quicListener quic.Listener
 	quicSession  quic.Session
 )

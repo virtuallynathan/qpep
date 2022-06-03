@@ -17,8 +17,9 @@ import (
 
 var (
 	proxyListener       net.Listener
-	ClientConfiguration = ClientConfig{ListenHost: "0.0.0.0", ListenPort: 8080,
-		GatewayHost: "198.18.0.254", GatewayPort: 443,
+	ClientConfiguration = ClientConfig{
+		ListenHost: "0.0.0.0", ListenPort: 9443,
+		GatewayHost: "198.56.1.10", GatewayPort: 443,
 		QuicStreamTimeout: 2, MultiStream: shared.QuicConfiguration.MultiStream,
 		ConnectionRetries: 3,
 		IdleTimeout:       time.Duration(300) * time.Second}

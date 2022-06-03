@@ -4,7 +4,6 @@
 package client
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -40,13 +39,6 @@ func NewClientProxyListener(network string, laddr *net.TCPAddr) (net.Listener, e
 	if err != nil {
 		return nil, err
 	}
-
-	//Find associated file descriptor for listener to set socket options on
-	fileDescriptorSource, err := listener.File()
-	if err != nil {
-		return nil, &net.OpError{Op: "ClientListener", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("get file descriptor: %s", err)}
-	}
-	defer fileDescriptorSource.Close()
 
 	//return a derived TCP listener object with TCProxy support
 	return &ClientProxyListener{base: listener}, nil

@@ -11,10 +11,9 @@
 #define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
 #include <windows.h>
+#include <Synchapi.h>
 
 #include "windivert.h"
-
-#define FILTERFMT "outbound and !loopback and tcp and remoteAddr == %s and remotePort == %d"
 
 enum {
   DIVERT_OK = 0,
@@ -23,6 +22,7 @@ enum {
   DIVERT_ERROR_FAILED = 3,
 };
 
-extern int InitializeWinDivertEngine(char* address, int port, int numThreads);
-extern int CloseWinDivertEngine();
+extern int  InitializeWinDivertEngine(int port, int numThreads);
+extern int  CloseWinDivertEngine();
 extern void logMessageToGo( char* message );
+extern void EnableMessageOutputToGo( int enabled );
