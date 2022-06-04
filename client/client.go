@@ -12,6 +12,7 @@ import (
 
 	"github.com/lucas-clemente/quic-go"
 	"github.com/parvit/qpep/shared"
+	"github.com/parvit/qpep/windivert"
 	"golang.org/x/net/context"
 )
 
@@ -145,12 +146,27 @@ func handleTCPConn(tcpConn net.Conn) {
 	streamWait.Add(2)
 
 	//Set our custom header to the QUIC session so the server can generate the correct TCP handshake on the other side
-	sessionHeader := shared.QpepHeader{SourceAddr: tcpConn.RemoteAddr().(*net.TCPAddr), DestAddr: tcpConn.LocalAddr().(*net.TCPAddr)}
+	sessionHeader := shared.QpepHeader{
+		SourceAddr: tcpConn.RemoteAddr().(*net.TCPAddr),
+		DestAddr:   tcpConn.LocalAddr().(*net.TCPAddr),
+	}
+
+	diverted, srcPort, dstPort, srcAddress, dstAddress := windivert.GetConnectionStateData(sessionHeader.SourceAddr.Port)
+	if diverted == windivert.DIVERT_OK {
+		log.Printf("Diverted connection: %v:%v %v:%v", srcAddress, srcPort, dstAddress, dstPort)
+
+		sessionHeader.DestAddr = &net.TCPAddr{
+			IP:   net.ParseIP(dstAddress),
+			Port: dstPort,
+		}
+	}
+
+	log.Printf("Sending QUIC header to server, SourceAddr: %v / DestAddr: %v", sessionHeader.SourceAddr, sessionHeader.DestAddr)
+
 	_, err := quicStream.Write(sessionHeader.ToBytes())
 	if err != nil {
 		log.Printf("Error writing to quic stream: %s", err.Error())
 	}
-	log.Printf("Sent QUIC header to server")
 
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
 		_, err := io.Copy(dst, src)

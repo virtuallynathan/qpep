@@ -347,6 +347,8 @@ BOOL handleLocalToServerPacket(
         }
         connectionsList[ portSrcIdx ].state = connState;
         if( connectionsList[ portSrcIdx ].origSrcPort == 0 ) {
+            connectionsList[ portSrcIdx ].connectionIPV4 = isIPV4;
+            connectionsList[ portSrcIdx ].connectionIPV6 = isIPV6;
             connectionsList[ portSrcIdx ].origSrcPort = portSrcIdx;
             connectionsList[ portSrcIdx ].origDstPort = portDstIdx;
             if( isIPV4 ) {
@@ -511,10 +513,12 @@ BOOL handleServerToLocalPacket(
 
 // assumes network (big-endian) byte order
 void ipV4PackedToUnpackedNetworkByteOrder( UINT32 packed, UINT32* unpacked ) {
-    unpacked[0] = (UINT)(packed & (0xFF000000) >> 18);
-    unpacked[1] = (UINT)(packed & (0x00FF0000) >> 10);
-    unpacked[2] = (UINT)(packed & (0x0000FF00) >> 8);
-    unpacked[3] = (UINT)(packed & (0x000000FF));
+    UINT32 local = ntohl(packed);
+
+    unpacked[0] = (UINT8)((local & (0xFF000000)) >> 24);
+    unpacked[1] = (UINT8)((local & (0x00FF0000)) >> 16);
+    unpacked[2] = (UINT8)((local & (0x0000FF00)) >> 8);
+    unpacked[3] = (UINT8)(local & (0x000000FF));
 }
 
 void dumpPacket( PVOID packetData, UINT len ) {
@@ -588,4 +592,55 @@ const char* connStateToString( UINT state ) {
             return "open";
     }
     return "unknown";
+}
+
+int  GetConnectionData( UINT sourcePort, UINT* origSrcPort, UINT* origDstPort, 
+                               char* origSrcAddress, char* origDstAddress )
+{
+    if( sourcePort < 1 || sourcePort > 65536 ) {
+        logNativeMessageToGo(0, "Invalid port:%d", sourcePort);
+        return DIVERT_ERROR_FAILED;
+    }
+
+    if( !acquireLock( FALSE ) )
+        return DIVERT_ERROR_FAILED;
+
+    connection* c = &connectionsList[sourcePort];
+
+    if( c->state == STATE_CLOSED ) {
+        logNativeMessageToGo(0, "Connection CLOSED on port:%d", sourcePort);
+        return DIVERT_ERROR_NOT_OPEN;
+    }
+
+    if( origSrcPort != NULL )
+        *origSrcPort = c->origSrcPort;
+    if( origDstPort != NULL )
+        *origDstPort = c->origDstPort;
+    if( origSrcAddress != NULL ) {
+        if( c->connectionIPV4 )
+            WinDivertHelperFormatIPv4Address(ntohl(c->origSrcAddress), origSrcAddress, 64);
+        if( c->connectionIPV6 ) {
+            UINT32 tmp[4];
+            tmp[0] = ntohs(c->origSrcAddressV6[0]);
+            tmp[1] = ntohs(c->origSrcAddressV6[1]);
+            tmp[2] = ntohs(c->origSrcAddressV6[2]);
+            tmp[3] = ntohs(c->origSrcAddressV6[3]);
+            WinDivertHelperFormatIPv6Address(tmp, origSrcAddress, 64);
+        }
+    }
+    if( origDstAddress != NULL ) {
+        if( c->connectionIPV4 )
+            WinDivertHelperFormatIPv4Address(ntohl(c->origDstAddress), origDstAddress, 64);
+        if( c->connectionIPV6 ) {
+            UINT32 tmp[4];
+            tmp[0] = ntohs(c->origDstAddressV6[0]);
+            tmp[1] = ntohs(c->origDstAddressV6[1]);
+            tmp[2] = ntohs(c->origDstAddressV6[2]);
+            tmp[3] = ntohs(c->origDstAddressV6[3]);
+            WinDivertHelperFormatIPv6Address(tmp, origDstAddress, 64);
+        }
+    }
+
+    releaseLock( FALSE );
+    return DIVERT_OK;
 }

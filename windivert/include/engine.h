@@ -39,6 +39,8 @@ typedef struct
     UINT   state;
     UINT   origSrcPort;
     UINT   origDstPort;
+    BOOL   connectionIPV4;
+    BOOL   connectionIPV6;
     UINT32  origSrcAddress;
     UINT32  origDstAddress;
     UINT32  origSrcAddressV6[4];

@@ -16,13 +16,16 @@
 #include "windivert.h"
 
 enum {
-  DIVERT_OK = 0,
-  DIVERT_ERROR_NOTINITILIZED = 1,
-  DIVERT_ERROR_ALREADY_INIT  = 2,
-  DIVERT_ERROR_FAILED = 3,
+  DIVERT_OK = 0,  //!< No issue
+  DIVERT_ERROR_NOTINITILIZED = 1,  //!< InitializeWinDivertEngine was not called previously 
+  DIVERT_ERROR_ALREADY_INIT  = 2,  //!< InitializeWinDivertEngine called again before CloseWinDivertEngine
+  DIVERT_ERROR_FAILED = 3,         //!< Operation failed
+  DIVERT_ERROR_NOT_OPEN = 4,       //!< Connection is not open so no state available
 };
 
 extern int  InitializeWinDivertEngine(int port, int numThreads);
 extern int  CloseWinDivertEngine();
 extern void logMessageToGo( char* message );
 extern void EnableMessageOutputToGo( int enabled );
+extern int  GetConnectionData( UINT sourcePort, UINT* origSrcPort, UINT* origDstPort, 
+                               char* origSrcAddress, char* origDstAddress );

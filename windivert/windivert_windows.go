@@ -8,6 +8,7 @@ import "C"
 
 import (
 	"log"
+	"unsafe"
 )
 
 const (
@@ -23,6 +24,29 @@ func InitializeWinDivertEngine(port, numThreads int) int {
 
 func CloseWinDivertEngine() int {
 	return int(C.CloseWinDivertEngine())
+}
+
+func GetConnectionStateData(port int) (int, int, int, string, string) {
+	const n = C.sizeof_char
+
+	var origSrcPort C.uint
+	var origDstPort C.uint
+	var origSrcAddress *C.char
+	var origDstAddress *C.char
+
+	origSrcAddress = (*C.char)(C.malloc(C.ulonglong(n) * C.ulonglong(65)))
+	origDstAddress = (*C.char)(C.malloc(C.ulonglong(n) * C.ulonglong(65)))
+	defer func() {
+		_ = recover()
+		C.free(unsafe.Pointer(origSrcAddress))
+		C.free(unsafe.Pointer(origDstAddress))
+	}()
+
+	result := C.GetConnectionData(C.uint(port), &origSrcPort, &origDstPort, origSrcAddress, origDstAddress)
+	if result == C.DIVERT_OK {
+		return DIVERT_OK, int(origSrcPort), int(origDstPort), C.GoString(origSrcAddress), C.GoString(origDstAddress)
+	}
+	return int(result), -1, -1, "", ""
 }
 
 func EnableDiverterLogging(enable bool) {
