@@ -15,6 +15,7 @@ HANDLE diverterHandle = INVALID_HANDLE_VALUE;
 HANDLE threadHandles[MAX_THREADS];
 
 int diveterMessagesEnabledToGo = TRUE;
+const char* tempAddress = "192.168.1.10";
 
 int InitializeWinDivertEngine(int port, int numThreads) 
 {
@@ -27,7 +28,7 @@ int InitializeWinDivertEngine(int port, int numThreads)
     InitializeSRWLock(&sharedRWLock);
 
     char filterOut[256] = "";
-    snprintf(filterOut, 256, FILTER_OUTBOUND, port, port);
+    snprintf(filterOut, 256, FILTER_OUTBOUND, port, 443, 443);
     logNativeMessageToGo(0, "Filtering outbound with %s", filterOut);
 
     diverterHandle = WinDivertOpen( filterOut, WINDIVERT_LAYER_NETWORK, 0, 0 );
@@ -47,7 +48,7 @@ int InitializeWinDivertEngine(int port, int numThreads)
 
     for( int i=0; i<numThreads; i++ ) {
         threadParameters* th = (threadParameters*)malloc( sizeof(threadParameters) );
-        th->gatewayAddress = NULL;
+        th->gatewayAddress = (char*)tempAddress;
         th->gatewayPort = port;
         th->threadID = i;
 
@@ -217,7 +218,7 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
             tcp_header->Fin, tcp_header->Psh,
             tcp_header->Rst );
 
-        //dumpPacket( (PVOID)packet, packetLen );
+        dumpPacket( (PVOID)packet, packetLen );
 
         memcpy(&send_addr, &recv_addr, sizeof(WINDIVERT_ADDRESS));
 
@@ -259,7 +260,7 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
             tcp_header->Fin, tcp_header->Psh,
             tcp_header->Rst );
 
-        //dumpPacket( (PVOID)packet, packetLen );
+        dumpPacket( (PVOID)packet, packetLen );
 
         if( WinDivertHelperCalcChecksums(packet, packetLen, &send_addr, 0) != TRUE ) 
         {
@@ -333,6 +334,9 @@ BOOL handleLocalToServerPacket(
             break;
     }
 
+    BOOL isIPV4 = ( ip_header != NULL ) ? TRUE : FALSE;
+    BOOL isIPV6 = ( ipv6_header != NULL ) ? TRUE : FALSE;
+
     if( connState != connStatePrev ) {
         logNativeMessageToGo(th->threadID,  "NEW Connection state for port %d: %s", portSrcIdx, connStateToString(connState));
 
@@ -345,6 +349,21 @@ BOOL handleLocalToServerPacket(
         if( connectionsList[ portSrcIdx ].origSrcPort == 0 ) {
             connectionsList[ portSrcIdx ].origSrcPort = portSrcIdx;
             connectionsList[ portSrcIdx ].origDstPort = portDstIdx;
+            if( isIPV4 ) {
+                connectionsList[ portSrcIdx ].origSrcAddress = ip_header->SrcAddr;
+                connectionsList[ portSrcIdx ].origDstAddress = ip_header->DstAddr;
+            }
+            if( isIPV6 ) {
+                connectionsList[ portSrcIdx ].origSrcAddressV6[0] = ipv6_header->SrcAddr[0];
+                connectionsList[ portSrcIdx ].origSrcAddressV6[1] = ipv6_header->SrcAddr[1];
+                connectionsList[ portSrcIdx ].origSrcAddressV6[2] = ipv6_header->SrcAddr[2];
+                connectionsList[ portSrcIdx ].origSrcAddressV6[3] = ipv6_header->SrcAddr[3];
+
+                connectionsList[ portSrcIdx ].origDstAddressV6[0] = ipv6_header->DstAddr[0];
+                connectionsList[ portSrcIdx ].origDstAddressV6[1] = ipv6_header->DstAddr[1];
+                connectionsList[ portSrcIdx ].origDstAddressV6[2] = ipv6_header->DstAddr[2];
+                connectionsList[ portSrcIdx ].origDstAddressV6[3] = ipv6_header->DstAddr[3];
+            }
         }
         releaseLock(TRUE);
     }
@@ -352,16 +371,16 @@ BOOL handleLocalToServerPacket(
     // redirect to the local go listener
     tcp_header->DstPort = htons(th->gatewayPort);
 
-    if( ip_header != NULL )
+    if( isIPV4 )
     {
         UINT32 remote_addr;
-        WinDivertHelperParseIPv4Address("192.168.1.10", &remote_addr);
+        WinDivertHelperParseIPv4Address(th->gatewayAddress, &remote_addr);
         ip_header->DstAddr = htonl(remote_addr);
     }
-    if( ipv6_header != NULL )
+    if( isIPV6 )
     {
         UINT32 remote_addr[4];
-        WinDivertHelperParseIPv6Address("192.168.1.10", remote_addr);
+        WinDivertHelperParseIPv6Address(th->gatewayAddress, remote_addr);
         ipv6_header->DstAddr[0] = htonl(remote_addr[0]);
         ipv6_header->DstAddr[1] = htonl(remote_addr[1]);
         ipv6_header->DstAddr[2] = htonl(remote_addr[2]);
@@ -369,8 +388,11 @@ BOOL handleLocalToServerPacket(
     }
 
     // redirect data for device driver
-    WinDivertHelperParseIPv4Address("192.168.1.10", send_addr->Flow.RemoteAddr);
+    WinDivertHelperParseIPv4Address(th->gatewayAddress, send_addr->Flow.RemoteAddr);
     send_addr->Flow.RemotePort = th->gatewayPort;
+
+    WinDivertHelperParseIPv4Address(th->gatewayAddress, send_addr->Socket.RemoteAddr);
+    send_addr->Socket.RemotePort = th->gatewayPort;
 
     return TRUE;
 }
@@ -384,6 +406,9 @@ BOOL handleServerToLocalPacket(
     WINDIVERT_ADDRESS* recv_addr,
     WINDIVERT_ADDRESS* send_addr ) 
 {
+    BOOL isIPV4 = ( ip_header != NULL ) ? TRUE : FALSE;
+    BOOL isIPV6 = ( ipv6_header != NULL ) ? TRUE : FALSE;
+
     if( !acquireLock(FALSE) ) {
         logNativeMessageToGo(th->threadID,  "Lock acquire timeout, dropping packet...");
         return FALSE;
@@ -392,6 +417,21 @@ BOOL handleServerToLocalPacket(
     UINT connState = connectionsList[ portSrcIdx ].state;
     UINT connStatePrev = connState;
     UINT origDstPort = connectionsList[ portSrcIdx ].origDstPort;
+
+    UINT32 origSrcAddressV4 = connectionsList[ portSrcIdx ].origSrcAddress;
+    UINT32 origDstAddressV4 = connectionsList[ portSrcIdx ].origDstAddress;
+
+    UINT32 origSrcAddressV6[4];
+    origSrcAddressV6[0] = connectionsList[ portSrcIdx ].origSrcAddressV6[0];
+    origSrcAddressV6[1] = connectionsList[ portSrcIdx ].origSrcAddressV6[1];
+    origSrcAddressV6[2] = connectionsList[ portSrcIdx ].origSrcAddressV6[2];
+    origSrcAddressV6[3] = connectionsList[ portSrcIdx ].origSrcAddressV6[3];
+
+    UINT32 origDstAddressV6[4];
+    origDstAddressV6[0] = connectionsList[ portSrcIdx ].origDstAddressV6[0];
+    origDstAddressV6[1] = connectionsList[ portSrcIdx ].origDstAddressV6[1];
+    origDstAddressV6[2] = connectionsList[ portSrcIdx ].origDstAddressV6[2];
+    origDstAddressV6[3] = connectionsList[ portSrcIdx ].origDstAddressV6[3];
     releaseLock(FALSE);
 
     // TODO: handle FYN
@@ -434,12 +474,47 @@ BOOL handleServerToLocalPacket(
 
     // redirect from local go listener as the original source port
     tcp_header->SrcPort = htons(origDstPort);
+    if( isIPV4 ) {
+        ip_header->SrcAddr = origDstAddressV4;
+        ip_header->DstAddr = origSrcAddressV4;
 
-    // redirect data for device driver
-    WinDivertHelperParseIPv4Address("127.0.0.1", send_addr->Flow.RemoteAddr);
+        ipV4PackedToUnpackedNetworkByteOrder( origDstAddressV4, send_addr->Flow.LocalAddr );
+        ipV4PackedToUnpackedNetworkByteOrder( origSrcAddressV4, send_addr->Flow.RemoteAddr );
+    }
+    if( isIPV6 ) {
+        ipv6_header->SrcAddr[0] = origDstAddressV6[0];
+        ipv6_header->SrcAddr[1] = origDstAddressV6[1];
+        ipv6_header->SrcAddr[2] = origDstAddressV6[2];
+        ipv6_header->SrcAddr[3] = origDstAddressV6[3];
+
+        ipv6_header->DstAddr[0] = origSrcAddressV6[0];
+        ipv6_header->DstAddr[1] = origSrcAddressV6[1];
+        ipv6_header->DstAddr[2] = origSrcAddressV6[2];
+        ipv6_header->DstAddr[3] = origSrcAddressV6[3];
+
+        send_addr->Flow.LocalAddr[0] = origDstAddressV6[0];
+        send_addr->Flow.LocalAddr[1] = origDstAddressV6[1];
+        send_addr->Flow.LocalAddr[2] = origDstAddressV6[2];
+        send_addr->Flow.LocalAddr[3] = origDstAddressV6[3];
+
+        send_addr->Flow.RemoteAddr[0] = origSrcAddressV6[0];
+        send_addr->Flow.RemoteAddr[1] = origSrcAddressV6[1];
+        send_addr->Flow.RemoteAddr[2] = origSrcAddressV6[2];
+        send_addr->Flow.RemoteAddr[3] = origSrcAddressV6[3];
+    }
+
     send_addr->Flow.LocalPort = htons(origDstPort);
+    send_addr->Socket.LocalPort = htons(origDstPort);
 
     return TRUE;
+}
+
+// assumes network (big-endian) byte order
+void ipV4PackedToUnpackedNetworkByteOrder( UINT32 packed, UINT32* unpacked ) {
+    unpacked[0] = (UINT)(packed & (0xFF000000) >> 18);
+    unpacked[1] = (UINT)(packed & (0x00FF0000) >> 10);
+    unpacked[2] = (UINT)(packed & (0x0000FF00) >> 8);
+    unpacked[3] = (UINT)(packed & (0x000000FF));
 }
 
 void dumpPacket( PVOID packetData, UINT len ) {

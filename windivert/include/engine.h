@@ -1,6 +1,7 @@
 #pragma once
 
-#define FILTER_OUTBOUND "!impostor and tcp and tcp.DstPort!=%d"
+//#define FILTER_OUTBOUND "!impostor and tcp and tcp.DstPort!=%d"
+#define FILTER_OUTBOUND "!impostor and tcp and tcp.DstPort!=%d && tcp.SrcPort != %d && tcp.DstPort != %d"
 
 #define MAXBUF            WINDIVERT_MTU_MAX
 #define INET6_ADDRSTRLEN  45
@@ -35,9 +36,13 @@ typedef struct
 
 typedef struct
 {
-    UINT origSrcPort;
-    UINT origDstPort;
-    UINT state;
+    UINT   state;
+    UINT   origSrcPort;
+    UINT   origDstPort;
+    UINT32  origSrcAddress;
+    UINT32  origDstAddress;
+    UINT32  origSrcAddressV6[4];
+    UINT32  origDstAddressV6[4];
 } connection;
 
 typedef struct
@@ -55,6 +60,8 @@ void        releaseLock(BOOLEAN exclusive);
 void         logNativeMessageToGo(int thid, const char *format...);
 const char*  connStateToString(UINT state);
 void         dumpPacket( PVOID packetData, UINT len );
+
+void ipV4PackedToUnpackedNetworkByteOrder( UINT32 packed, UINT32* unpacked );
 
 BOOL handleLocalToServerPacket(
     threadParameters* th,
