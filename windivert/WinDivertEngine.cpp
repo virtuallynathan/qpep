@@ -24,16 +24,16 @@ int InitializeWinDivertEngine(int port, int numThreads)
         return DIVERT_ERROR_FAILED;
     }
 
-    logNativeMessageToGo(0, "Initializing windivert engine...");
+    logNativeMessageToGo(0, "Initializing windivert engine..." ); 
     InitializeSRWLock(&sharedRWLock);
 
     char filterOut[256] = "";
-    snprintf(filterOut, 256, FILTER_OUTBOUND, port, 443, 443);
+    snprintf(filterOut, 256, FILTER_OUTBOUND, port);
     logNativeMessageToGo(0, "Filtering outbound with %s", filterOut);
 
     diverterHandle = WinDivertOpen( filterOut, WINDIVERT_LAYER_NETWORK, 0, 0 );
     if (diverterHandle == INVALID_HANDLE_VALUE) {
-        logNativeMessageToGo(0, "OUT: Could not initialize windivert engine, errorcode %d", GetLastError());
+        logNativeMessageToGo(0, "Could not initialize windivert engine, errorcode %d", GetLastError());
         return DIVERT_ERROR_NOTINITILIZED;
     }
 
@@ -250,6 +250,25 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
             &packetData, &packetDataLen,
             &next, &nextLen);
 
+        if( ip_header != NULL )
+        {
+            WinDivertHelperFormatIPv4Address(ntohl(ip_header->SrcAddr),
+                src_str, sizeof(src_str));
+            WinDivertHelperFormatIPv4Address(ntohl(ip_header->DstAddr),
+                dst_str, sizeof(dst_str));
+        }
+        if( ipv6_header != NULL )
+        {
+            UINT32 src_addr[4], dst_addr[4];
+
+            WinDivertHelperNtohIPv6Address(ipv6_header->SrcAddr, src_addr);
+            WinDivertHelperNtohIPv6Address(ipv6_header->DstAddr, dst_addr);
+            WinDivertHelperFormatIPv6Address(src_addr, src_str,
+                sizeof(src_str));
+            WinDivertHelperFormatIPv6Address(dst_addr, dst_str,
+                sizeof(dst_str));
+        }
+
         // announce new packet
         logNativeMessageToGo(th->threadID,  "Redirected packet: %s:%d %s %s:%d (%d) [S:%d A:%d F:%d P:%d R:%d]", 
             src_str, ntohs(tcp_header->SrcPort), 
@@ -418,6 +437,8 @@ BOOL handleServerToLocalPacket(
     int portSrcIdx = (int)ntohs(tcp_header->DstPort);
     UINT connState = connectionsList[ portSrcIdx ].state;
     UINT connStatePrev = connState;
+
+    UINT origSrcPort = connectionsList[ portSrcIdx ].origSrcPort;
     UINT origDstPort = connectionsList[ portSrcIdx ].origDstPort;
 
     UINT32 origSrcAddressV4 = connectionsList[ portSrcIdx ].origSrcAddress;
@@ -476,6 +497,8 @@ BOOL handleServerToLocalPacket(
 
     // redirect from local go listener as the original source port
     tcp_header->SrcPort = htons(origDstPort);
+    tcp_header->DstPort = htons(origSrcPort);
+
     if( isIPV4 ) {
         ip_header->SrcAddr = origDstAddressV4;
         ip_header->DstAddr = origSrcAddressV4;
@@ -505,6 +528,8 @@ BOOL handleServerToLocalPacket(
         send_addr->Flow.RemoteAddr[3] = origSrcAddressV6[3];
     }
 
+    send_addr->Flow.RemotePort = htons(origSrcPort);
+    send_addr->Socket.RemotePort = htons(origSrcPort);
     send_addr->Flow.LocalPort = htons(origDstPort);
     send_addr->Socket.LocalPort = htons(origDstPort);
 

@@ -1,9 +1,5 @@
 package windivert
 
-import (
-	"log"
-)
-
 const (
 	DIVERT_OK                  = 0
 	DIVERT_ERROR_NOTINITILIZED = 1
@@ -12,11 +8,11 @@ const (
 )
 
 func InitializeWinDivertEngine(port, numThreads int) int {
-	return C.DIVERT_OK
+	return DIVERT_OK
 }
 
 func CloseWinDivertEngine() int {
-	return C.DIVERT_OK
+	return DIVERT_OK
 }
 
 func GetConnectionStateData(port int) (int, int, int, string, string) {
