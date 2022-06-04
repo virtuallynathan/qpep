@@ -26,19 +26,27 @@ func main() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 
 	client.ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
+	client.ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
+	client.ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
+	client.ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
 	if shared.QuicConfiguration.ClientFlag {
 		log.Println("Running Client")
-		windivert.EnableDiverterLogging(false)
+		windivert.EnableDiverterLogging(client.ClientConfiguration.Verbose)
 
-		if windivert.InitializeWinDivertEngine(9443, 1) != windivert.DIVERT_OK {
+		host := client.ClientConfiguration.GatewayHost
+		port := client.ClientConfiguration.GatewayPort
+		threads := client.ClientConfiguration.WinDivertThreads
+
+		if windivert.InitializeWinDivertEngine(host, port, threads) != windivert.DIVERT_OK {
 			windivert.CloseWinDivertEngine()
 			os.Exit(1)
 		}
 		go client.RunClient(execContext)
 	} else {
+		log.Println("Running Server")
 		go server.RunServer(execContext)
 	}
 

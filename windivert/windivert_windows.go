@@ -18,8 +18,12 @@ const (
 	DIVERT_ERROR_FAILED        = 3
 )
 
-func InitializeWinDivertEngine(port, numThreads int) int {
-	return int(C.InitializeWinDivertEngine(C.int(port), C.int(numThreads)))
+func InitializeWinDivertEngine(host string, port, numThreads int) int {
+	hostStr := C.CString(host)
+	defer func() {
+		C.free(unsafe.Pointer(hostStr))
+	}()
+	return int(C.InitializeWinDivertEngine(hostStr, C.int(port), C.int(numThreads)))
 }
 
 func CloseWinDivertEngine() int {

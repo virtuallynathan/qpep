@@ -39,6 +39,8 @@ type ClientConfig struct {
 	MultiStream       bool
 	IdleTimeout       time.Duration
 	ConnectionRetries int
+	WinDivertThreads  int
+	Verbose           bool
 }
 
 func RunClient(ctx context.Context) {

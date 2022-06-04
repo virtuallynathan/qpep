@@ -15,9 +15,8 @@ HANDLE diverterHandle = INVALID_HANDLE_VALUE;
 HANDLE threadHandles[MAX_THREADS];
 
 int diveterMessagesEnabledToGo = TRUE;
-const char* tempAddress = "192.168.1.10";
 
-int InitializeWinDivertEngine(int port, int numThreads) 
+int InitializeWinDivertEngine(char* host, int port, int numThreads) 
 {
     if( port < 1 || port > 65536 || numThreads < 1 || numThreads > MAX_THREADS ) {
         logNativeMessageToGo(0, "Cannot initialize windiver engine with provided data, port:%d, threads:%d", port, numThreads);
@@ -48,7 +47,7 @@ int InitializeWinDivertEngine(int port, int numThreads)
 
     for( int i=0; i<numThreads; i++ ) {
         threadParameters* th = (threadParameters*)malloc( sizeof(threadParameters) );
-        th->gatewayAddress = (char*)tempAddress;
+        th->gatewayAddress = host;
         th->gatewayPort = port;
         th->threadID = i;
 

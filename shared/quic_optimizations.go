@@ -15,6 +15,9 @@ type QuicConfig struct {
 	MinReceivedBeforeAckDecimation int
 	ClientFlag                     bool
 	GatewayIP                      string
+	GatewayPort                    int
+	WinDivertThreads               int
+	Verbose                        bool
 }
 
 var (
@@ -30,7 +33,10 @@ func init() {
 	varAckDelayFlag := flag.Float64("varAckDelay", 0.25, "Variable number of miliseconds to hold back an ack for decimation, as multiple of RTT")
 	minReceivedBeforeAckDecimationFlag := flag.Int("minBeforeDecimation", 100, "Minimum number of packets before initiating ack decimation")
 	clientFlag := flag.Bool("client", false, "a bool")
-	gatewayFlag := flag.String("gateway", "198.18.0.254", "IP address of gateway running qpep")
+	gatewayFlag := flag.String("gateway", "198.18.0.254", "IP address of gateway running qpep server")
+	gatewayPortFlag := flag.Int("port", 9443, "Port of gateway running qpep server")
+	winDiverterThreads := flag.Int("threads", 1, "Worker threads for windivert engine (min 1, max 8)")
+	verbose := flag.Bool("verbose", false, "Outputs data about diverted connections for debug")
 
 	flag.Parse()
 	if !flag.Parsed() {
@@ -48,5 +54,8 @@ func init() {
 		MinReceivedBeforeAckDecimation: *minReceivedBeforeAckDecimationFlag,
 		ClientFlag:                     *clientFlag,
 		GatewayIP:                      *gatewayFlag,
+		GatewayPort:                    *gatewayPortFlag,
+		WinDivertThreads:               *winDiverterThreads,
+		Verbose:                        *verbose,
 	}
 }
