@@ -5,6 +5,10 @@ go 1.16
 require (
 	github.com/getlantern/systray v1.2.1
 	github.com/lucas-clemente/quic-go v0.20.1
-	golang.org/x/net v0.0.0-20210505024714-0287a6fb4125
-	golang.org/x/sys v0.0.0-20210503173754-0981d6026fa6
+	github.com/sqweek/dialog v0.0.0-20220504154117-be45b268883a
+	github.com/stretchr/testify v1.4.0 // indirect
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 )
