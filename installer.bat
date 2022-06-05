@@ -1,4 +1,4 @@
-rem @echo off
+@echo off
 
 echo ********************************
 echo **** QPEP INSTALLER BUILDER ****
@@ -19,6 +19,9 @@ if "%2" EQU "--build32" (
 )
 if "%2" EQU "--build64" (
     set /A BUILD64=1
+)
+if "%2" EQU "--rebuild" (
+    goto installer
 )
 
 if %BUILD64% EQU 0 (
@@ -56,6 +59,11 @@ if %ERRORLEVEL% GEQ 1 goto fail
 go clean
 if %ERRORLEVEL% GEQ 1 goto fail
 
+COPY /Y windivert\LICENSE build\LICENSE.windivert
+if %ERRORLEVEL% GEQ 1 goto fail
+COPY /Y LICENSE build\LICENSE
+if %ERRORLEVEL% GEQ 1 goto fail
+
 echo OK
 
 set GOOS=windows
@@ -64,7 +72,7 @@ if %BUILD64% NEQ 0 (
     go clean -cache
 
     ECHO [Copy dependencies x64]
-    COPY windivert\x64\* build\x64\
+    COPY /Y windivert\x64\* build\x64\
     if %ERRORLEVEL% GEQ 1 goto fail
     echo OK
 
@@ -89,7 +97,7 @@ if %BUILD32% NEQ 0 (
     go clean -cache
 
     ECHO [Copy dependencies x86]
-    COPY windivert\x86\* build\x86\
+    COPY /Y windivert\x86\* build\x86\
     if %ERRORLEVEL% GEQ 1 goto fail
     echo OK
 
@@ -109,6 +117,7 @@ if %BUILD32% NEQ 0 (
     echo OK
 )
 
+:installer
 echo [Build of installer]
 msbuild installer\installer.sln
 if %ERRORLEVEL% GEQ 1 goto fail
