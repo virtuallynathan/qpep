@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/getlantern/systray v1.2.1
 	github.com/lucas-clemente/quic-go v0.20.1
+	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/sqweek/dialog v0.0.0-20220504154117-be45b268883a
 	github.com/stretchr/testify v1.4.0 // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2

@@ -10,9 +10,9 @@ import (
 	"github.com/getlantern/systray"
 )
 
-func readConfiguration() (outerr error) {
-	return readConfigurationFromFile("APPDATA")
-}
+const (
+	BASEDIR_ENVIRONMENTVAR = "APPDATA"
+)
 
 func main() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)

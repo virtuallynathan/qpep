@@ -6,9 +6,9 @@ import (
 	"log"
 )
 
-func readConfiguration() (outerr error) {
-	return readConfigurationFromFile("HOME")
-}
+const string (
+	BASEDIR_ENVIRONMENTVAR = "HOME"
+)
 
 func main() {
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
