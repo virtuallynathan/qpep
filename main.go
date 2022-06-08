@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"syscall"
 	"time"
 
 	"github.com/parvit/qpep/client"
@@ -51,7 +52,7 @@ func main() {
 	}
 
 	interruptListener := make(chan os.Signal)
-	signal.Notify(interruptListener, os.Interrupt)
+	signal.Notify(interruptListener, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	<-interruptListener
 
 	cancelExecutionFunc()

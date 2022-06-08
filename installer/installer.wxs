@@ -4,6 +4,9 @@
         <Package InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="qpep.cab" EmbedCab="yes" />
 
+        <MajorUpgrade
+            DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit.">
+
         <Icon Id="installer.ico" SourceFile="$(var.ProjectDir)\installer.ico" />
         <Icon Id="applications_internet.ico" SourceFile="$(var.ProjectDir)\applications-internet.ico" />
 
@@ -29,7 +32,7 @@
                     <Shortcut Id="QPepDesktopShortcutX86"
                         Name="QPep 32bit"
                         Description="TCP traffic accelerator (32bit)"
-                        Target="[APPLICATIONROOTDIRECTORY]\x86\qpep-tray.exe"
+                        Target="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe Start qpep-tray.exe -Verb Runas"
                         Icon="applications_internet.ico"
                         WorkingDirectory="INSTALLDIRX86"/>
                     <RemoveFolder Id="DesktopFolder" On="uninstall"/>
@@ -46,7 +49,7 @@
                     <Shortcut Id="QPepDesktopShortcutX64"
                         Name="QPep 64bit"
                         Description="TCP traffic accelerator (64bit)"
-                        Target="[APPLICATIONROOTDIRECTORY]\x64\qpep-tray.exe"
+                        Target="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe Start qpep-tray.exe -Verb Runas"
                         Icon="applications_internet.ico"
                         WorkingDirectory="INSTALLDIRX64"/>
                     <RegistryValue
