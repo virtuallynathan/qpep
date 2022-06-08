@@ -1,3 +1,6 @@
+//go:build windows
+// +build windows
+
 package windivert
 
 //#cgo windows CPPFLAGS: -DWIN32 -D_WIN32_WINNT=0x0600 -I include/

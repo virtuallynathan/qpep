@@ -1,7 +1,5 @@
 
-#ifndef WIN32
-  #error Only supported compilation is on Windows platform
-#endif // WIN32
+#ifdef WIN32
 
 // Including SDKDDKVer.h defines the highest available Windows platform.
 // If you wish to build your application for a previous Windows platform, include WinSDKVer.h and
@@ -29,3 +27,5 @@ extern void logMessageToGo( char* message );
 extern void EnableMessageOutputToGo( int enabled );
 extern int  GetConnectionData( UINT sourcePort, UINT* origSrcPort, UINT* origDstPort, 
                                char* origSrcAddress, char* origDstAddress );
+
+#endif // WIN32

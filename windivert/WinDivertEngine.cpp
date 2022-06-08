@@ -1,4 +1,6 @@
 
+#ifdef WIN32
+
 extern "C" {
     #include "windivert_wrapper.h"
     #include "stdio.h"
@@ -668,3 +670,5 @@ int  GetConnectionData( UINT sourcePort, UINT* origSrcPort, UINT* origDstPort,
     releaseLock( FALSE );
     return DIVERT_OK;
 }
+
+#endif

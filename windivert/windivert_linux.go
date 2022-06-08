@@ -1,4 +1,10 @@
+//go:build linux
+// +build linux
+
 package windivert
+
+//#cgo linux CPPFLAGS: -I include/
+import "C"
 
 const (
 	DIVERT_OK                  = 0
@@ -7,7 +13,7 @@ const (
 	DIVERT_ERROR_FAILED        = 3
 )
 
-func InitializeWinDivertEngine(port, numThreads int) int {
+func InitializeWinDivertEngine(host string, port, numThreads int) int {
 	return DIVERT_OK
 }
 
