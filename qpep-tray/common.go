@@ -150,6 +150,9 @@ func onReady() {
 					break
 				}
 
+				stopClient()
+				stopServer()
+
 				systray.Quit()
 				return
 			}

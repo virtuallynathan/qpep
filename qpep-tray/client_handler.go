@@ -20,6 +20,7 @@ func startClient() error {
 		clientCmd = nil
 		return ErrCommandNotStarted
 	}
+	InfoMsg("Client started")
 
 	return nil
 }
@@ -42,5 +43,6 @@ func stopClient() error {
 
 	clientCmd.Wait()
 	clientCmd = nil
+	InfoMsg("Client stopped")
 	return nil
 }

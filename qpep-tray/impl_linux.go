@@ -5,15 +5,15 @@ const string (
 	EXENAME                = "qpep"
 )
 
-func getSysAttributes() *exec.SysAttributes {
-	exeFile := filepath.Join(ExeDir, EXENAME)
-	handle, _ := syscall.GetCurrentProcess()
-	
-	return nil
+func stopClientProcess() error {
+	return stopProcess(clientCmd.Process.Pid)
+}
+func stopServerProcess() error {
+	return stopProcess(serverCmd.Process.Pid)
 }
 
-func stopClientProcess() error {
-	proc, err := os.FindProcess(clientCmd.Process.Pid)
+func stopProcess(pid int) error {
+	proc, err := os.FindProcess(pid)
 	if err != nil {
 		ErrorMsg("Could not terminate client process: %v", err)
 		return ErrFailed
