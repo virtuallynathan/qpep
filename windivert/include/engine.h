@@ -12,26 +12,13 @@
 #define htonl(x) WinDivertHelperHtonl(x)
 
 enum {
-  STATE_CLOSED = 0,
-  STATE_SYN = 1,
-  STATE_SYN_ACK = 2,
-  STATE_OPEN = 3,
-  STATE_WAIT = 4,
+  STATE_CLOSED = 0,   //!< Connection is closed
+  STATE_SYN = 1,      //!< Connection received SYN, awaits for SYN ACK
+  STATE_SYN_ACK = 2,  //!< Connection received SYN ACK, awaits for ACK
+  STATE_OPEN = 3,     //!< Connection is open for push / ack packets
+  STATE_WAIT = 4,     //!< FIN or RST packet was received, waiting for ACK
+  STATE_MAX           //!< Max status for checks
 };
-
-typedef struct
-{
-    WINDIVERT_IPHDR ip;
-    WINDIVERT_TCPHDR tcp;
-    unsigned char data[MAXBUF];
-} TCPPACKET;
-
-typedef struct
-{
-    WINDIVERT_IPV6HDR ipv6;
-    WINDIVERT_TCPHDR tcp;
-    unsigned char data[MAXBUF];
-} TCPV6PACKET;
 
 typedef struct
 {
@@ -48,9 +35,11 @@ typedef struct
 
 typedef struct
 {
-    int threadID;
-    int gatewayPort;
+    int   threadID;
+    int   gatewayPort;
     char* gatewayAddress;
+    int   listenPort;
+    char* listenAddress;
 } threadParameters;
 
 DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter);
@@ -60,9 +49,9 @@ void        releaseLock(BOOLEAN exclusive);
 
 void         logNativeMessageToGo(int thid, const char *format...);
 const char*  connStateToString(UINT state);
-void         dumpPacket( PVOID packetData, UINT len );
-
-void ipV4PackedToUnpackedNetworkByteOrder( UINT32 packed, UINT32* unpacked );
+void         dumpPacket( int thid, PVOID packetData, UINT len );
+void         atomicUpdateConnectionState(UINT port, int state);
+void         ipV4PackedToUnpackedNetworkByteOrder( UINT32 packed, UINT32* unpacked );
 
 BOOL handleLocalToServerPacket(
     threadParameters* th,

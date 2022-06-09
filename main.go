@@ -28,6 +28,7 @@ func main() {
 
 	client.ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 	client.ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
+	client.ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
 	client.ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
 	client.ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
 
@@ -37,11 +38,13 @@ func main() {
 		log.Println("Running Client")
 		windivert.EnableDiverterLogging(client.ClientConfiguration.Verbose)
 
-		host := client.ClientConfiguration.GatewayHost
-		port := client.ClientConfiguration.GatewayPort
-		threads := client.ClientConfiguration.WinDivertThreads
+		gatewayHost := shared.QuicConfiguration.GatewayIP
+		gatewayPort := shared.QuicConfiguration.GatewayPort
+		listenHost := shared.QuicConfiguration.ListenIP
+		listenPort := shared.QuicConfiguration.ListenPort
+		threads := shared.QuicConfiguration.WinDivertThreads
 
-		if windivert.InitializeWinDivertEngine(host, port, threads) != windivert.DIVERT_OK {
+		if windivert.InitializeWinDivertEngine(gatewayHost, listenHost, gatewayPort, listenPort, threads) != windivert.DIVERT_OK {
 			windivert.CloseWinDivertEngine()
 			os.Exit(1)
 		}

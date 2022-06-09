@@ -23,7 +23,10 @@ var (
 		GatewayHost: "198.56.1.10", GatewayPort: 443,
 		QuicStreamTimeout: 2, MultiStream: shared.QuicConfiguration.MultiStream,
 		ConnectionRetries: 3,
-		IdleTimeout:       time.Duration(300) * time.Second}
+		IdleTimeout:       time.Duration(300) * time.Second,
+		WinDivertThreads:  1,
+		Verbose:           false,
+	}
 	quicSession             quic.Session
 	QuicClientConfiguration = quic.Config{
 		MaxIncomingStreams: 40000,

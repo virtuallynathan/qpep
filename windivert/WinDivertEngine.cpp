@@ -10,28 +10,45 @@ extern "C" {
     #include "engine.h"
 }
 
-connection connectionsList[65536];
-SRWLOCK sharedRWLock;
+connection connectionsList[65536]; //!< List of connection tracking for every source port
+SRWLOCK sharedRWLock; //!< Synchronization lock for the worker threads, very similar to go's sync.RWMutex
 
-HANDLE diverterHandle = INVALID_HANDLE_VALUE;
-HANDLE threadHandles[MAX_THREADS];
+HANDLE diverterHandle = INVALID_HANDLE_VALUE; //!< WinDivert handler
+HANDLE threadHandles[MAX_THREADS]; //!< Thread handles
 
-int diveterMessagesEnabledToGo = TRUE;
+int diveterMessagesEnabledToGo = TRUE; //!< When true, verbose redirect messages are output in the go log
 
-int InitializeWinDivertEngine(char* host, int port, int numThreads) 
+/**
+ * @brief Initializes the divert engine and the worker threads to handle the packets
+ * 
+ * @param gatewayHost   Host of the remote qpep server
+ * @param listenHost    Address on which the qpep client is listening
+ * @param gatewayPort   Port of the remote qpep server
+ * @param listenPort    Port of the local listening client
+ * @param numThreads    Number of worker threads to use (1-8)
+ * @return DIVERT_OK    if everything ok, an error otherwise
+ */
+int InitializeWinDivertEngine(char* gatewayHost, char* listenHost, int gatewayPort, int listenPort, int numThreads) 
 {
-    if( port < 1 || port > 65536 || numThreads < 1 || numThreads > MAX_THREADS ) {
-        logNativeMessageToGo(0, "Cannot initialize windiver engine with provided data, port:%d, threads:%d", port, numThreads);
+    if( gatewayPort < 1 || gatewayPort > 65536 || numThreads < 1 || numThreads > MAX_THREADS ) {
+        logNativeMessageToGo(0, "Cannot initialize windiver engine with provided data, gateway port:%d, threads:%d", gatewayPort, numThreads);
+        return DIVERT_ERROR_FAILED;
+    }
+    if( listenPort < 1 || listenPort > 65536 || gatewayHost == NULL || listenHost == NULL ) {
+        logNativeMessageToGo(0, "Cannot initialize windiver engine with provided data, listen port:%d, gatewayHost:%s, listenHost:%s", 
+            listenPort, gatewayHost ? gatewayHost : NULL, listenHost ? listenHost : NULL );
         return DIVERT_ERROR_FAILED;
     }
 
     logNativeMessageToGo(0, "Initializing windivert engine..." ); 
     InitializeSRWLock(&sharedRWLock);
 
+    // The filter for windivert, captures outbound tcp packets which are not directed at the client listening port
     char filterOut[256] = "";
-    snprintf(filterOut, 256, FILTER_OUTBOUND, port);
+    snprintf(filterOut, 256, FILTER_OUTBOUND, listenPort);
     logNativeMessageToGo(0, "Filtering outbound with %s", filterOut);
 
+    // Open Windivert engine
     diverterHandle = WinDivertOpen( filterOut, WINDIVERT_LAYER_NETWORK, 0, 0 );
     if (diverterHandle == INVALID_HANDLE_VALUE) {
         logNativeMessageToGo(0, "Could not initialize windivert engine, errorcode %d", GetLastError());
@@ -41,16 +58,20 @@ int InitializeWinDivertEngine(char* host, int port, int numThreads)
     for( int i=0; i<MAX_THREADS; i++ ) {
         threadHandles[i] = INVALID_HANDLE_VALUE;
     }
+    // Set the connections to initial state
     for( int i=0; i<65536; i++ ) {
         connectionsList[i].origSrcPort = 0;
         connectionsList[i].origDstPort = 0;
         connectionsList[i].state = STATE_CLOSED;
     }
 
+    // Initialize the worker threads
     for( int i=0; i<numThreads; i++ ) {
         threadParameters* th = (threadParameters*)malloc( sizeof(threadParameters) );
-        th->gatewayAddress = host;
-        th->gatewayPort = port;
+        th->gatewayAddress = gatewayHost;
+        th->gatewayPort = gatewayPort;
+        th->listenAddress = listenHost;
+        th->listenPort = listenPort;
         th->threadID = i;
 
         threadHandles[i] = CreateThread(
@@ -70,6 +91,11 @@ int InitializeWinDivertEngine(char* host, int port, int numThreads)
     return DIVERT_OK;
 }
 
+/**
+ * @brief Stops the worker threads and closes the divert engine
+ * 
+ * @return DIVERT_OK    if everything ok, an error otherwise
+ */
 int CloseWinDivertEngine() 
 {
     if( diverterHandle == INVALID_HANDLE_VALUE ) {
@@ -110,6 +136,12 @@ int CloseWinDivertEngine()
     return DIVERT_OK;
 }
 
+/**
+ * @brief Main dispatching routine for captured packets
+ * 
+ * @param lpParameter 
+ * @return DWORD 
+ */
 DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
 {
     WinDivertSetParam(diverterHandle, WINDIVERT_PARAM_QUEUE_LENGTH, 8192);
@@ -138,6 +170,7 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
 
     while (TRUE)
     {
+        // Receive packets
         if (!WinDivertRecv(diverterHandle, (void*)packet, MAXBUF, &packetLen, &recv_addr))
         {
             error = GetLastError();
@@ -197,7 +230,7 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
         }
 
         if( next != NULL ) {
-            // TODO
+            // Not handled
             logNativeMessageToGo(th->threadID,  "WinDivertRecv: next len (%d)", nextLen );
         }
 
@@ -219,11 +252,12 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
             tcp_header->Fin, tcp_header->Psh,
             tcp_header->Rst );
 
-        dumpPacket( (PVOID)packet, packetLen );
+        dumpPacket(th->threadID, (PVOID)packet, packetLen );
 
+        // creates the windivert device destination address
         memcpy(&send_addr, &recv_addr, sizeof(WINDIVERT_ADDRESS));
 
-        if( localSrcPort != th->gatewayPort ) {
+        if( localSrcPort != th->listenPort ) {
             logNativeMessageToGo(th->threadID, "LOCAL -> GO");
             // local to go listener redirect
             BOOL redirected = handleLocalToServerPacket( th, ip_header, ipv6_header, tcp_header, 
@@ -240,7 +274,7 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
             if( !redirected )
                 continue;
         }
-        send_addr.Impostor = 1;
+        send_addr.Impostor = 1; // this tells windivert that the packets was already redirected and avoids loops
 
         // Reparsing for updated data
         WinDivertHelperParsePacket(packet, packetLen, 
@@ -280,14 +314,16 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
             tcp_header->Fin, tcp_header->Psh,
             tcp_header->Rst );
 
-        dumpPacket( (PVOID)packet, packetLen );
+        dumpPacket( th->threadID, (PVOID)packet, packetLen );
 
+        // Calculates the new checksums
         if( WinDivertHelperCalcChecksums(packet, packetLen, &send_addr, 0) != TRUE ) 
         {
             logNativeMessageToGo(th->threadID, "Could not calculate checksum, dropping...");
             continue;
         }
 
+        // Injects the modified packet to the network
         logNativeMessageToGo(th->threadID,  "WinDivertSend: Write packet (%d)", packetLen );
         if (!WinDivertSend(diverterHandle, packet, packetLen, NULL, &send_addr))
         {
@@ -304,10 +340,54 @@ DWORD WINAPI dispatchDivertedOutboundPackets(LPVOID lpParameter)
         logNativeMessageToGo(th->threadID,  "WinDivertSend: Sent packet" );
     }
 
-    return 0;
+    return DIVERT_OK;
 }
 
-// eg. 54731 -> 8080 redirected as 54731 -> 9443 (connection index 54731)
+/**
+ * @brief Updates only the connection status atomically
+ * 
+ * @param port   Port of the connection
+ * @param state  New status of the connection
+ */
+void atomicUpdateConnectionState(UINT port, int state) {
+    if( port < 1 || port > 65536 ) {
+        logNativeMessageToGo(0, "Invalid port provided, port:%d", port);
+        return;
+    }
+    if( state < STATE_CLOSED || state >= STATE_MAX ) {
+        logNativeMessageToGo(0, "Invalid connection state provided, state:%d", state);
+        return;
+    }
+
+    if( !acquireLock(TRUE) ) {
+        return;
+    }
+    connectionsList[ port ].state = state;
+    releaseLock(TRUE);
+}
+
+/**
+ * @brief Handles the redirect logic when packet is from the local machine to the remote server
+ * 
+ * eg. 54731 -> 8080 redirected as 54731 -> 9443 (connection index 54731)
+ * 
+ * Actually the redirection is pointed at the local client, substituting the destination port 
+ * with the listening port of the client and also the address.
+ * 
+ * Once the connection is established in the client.go listener, then the QUIC header is changed
+ * back to the remote destination so as to mantain the actual destination available.
+ * 
+ * Note on the recv_addr and send_addr: those are structures used by WinDivert to manage the
+ * correct routing to the device driver indenpendently to the actual content of the packet.
+ * 
+ * @param th           Thread parameters structure pointer
+ * @param ip_header    Parsed IPv4 header pointer to the packet
+ * @param ipv6_header  Parsed IPv46 header pointer to the packet
+ * @param tcp_header   Parsed TCP protocol header pointer to the packet
+ * @param recv_addr    Received address from the windivert device
+ * @param send_addr    Destination address from the windivert device
+ * @return             TRUE if packet was actually redirected, FALSE if dropped
+ */
 BOOL handleLocalToServerPacket(
     threadParameters* th,
     PWINDIVERT_IPHDR ip_header,
@@ -316,6 +396,7 @@ BOOL handleLocalToServerPacket(
     WINDIVERT_ADDRESS* recv_addr,
     WINDIVERT_ADDRESS* send_addr ) 
 {
+    // Critical section to acquire the current connection data
     if( !acquireLock(FALSE) ) {
         logNativeMessageToGo(th->threadID,  "Lock acquire timeout, dropping packet...");
         return FALSE;
@@ -327,6 +408,7 @@ BOOL handleLocalToServerPacket(
     releaseLock(FALSE);
 
     // TODO: handle FYN
+    // Handles the sequence by which the TCP handshake is expected
     logNativeMessageToGo(th->threadID,  "Connection state for port %d: %s", portSrcIdx, connStateToString(connState));
     switch( connState ) {
         case STATE_CLOSED:
@@ -338,25 +420,46 @@ BOOL handleLocalToServerPacket(
             break;
 
         case STATE_SYN:
-            logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
-            return FALSE;
+            if( tcp_header->Rst ) {
+                logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+                atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
+            } else {
+                logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
+                return FALSE;
+            }
 
         case STATE_SYN_ACK:
-            if( !tcp_header->Ack ) {
+            if( tcp_header->Rst ) {
+                logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+                atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
+            } else if( !tcp_header->Ack ) {
                 logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
                 return FALSE;
             }
             connState = STATE_OPEN;
             break;
 
+        case STATE_WAIT:
+            if( !(tcp_header->Ack) ) {
+                logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
+                return FALSE;
+            }
+            logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+            atomicUpdateConnectionState( portSrcIdx, STATE_CLOSED );
+            break;
+
         case STATE_OPEN:
-            logNativeMessageToGo(th->threadID,  "" );
+            if( tcp_header->Rst ) {
+                logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+                atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
+            }
             break;
     }
 
     BOOL isIPV4 = ( ip_header != NULL ) ? TRUE : FALSE;
     BOOL isIPV6 = ( ipv6_header != NULL ) ? TRUE : FALSE;
 
+    // update (and acquire lock) only if connection state has changed
     if( connState != connStatePrev ) {
         logNativeMessageToGo(th->threadID,  "NEW Connection state for port %d: %s", portSrcIdx, connStateToString(connState));
 
@@ -391,35 +494,58 @@ BOOL handleLocalToServerPacket(
     }
 
     // redirect to the local go listener
-    tcp_header->DstPort = htons(th->gatewayPort);
+    tcp_header->DstPort = htons(th->listenPort);
 
     if( isIPV4 )
     {
         UINT32 remote_addr;
-        WinDivertHelperParseIPv4Address(th->gatewayAddress, &remote_addr);
+        WinDivertHelperParseIPv4Address(th->listenAddress, &remote_addr);
         ip_header->DstAddr = htonl(remote_addr);
     }
     if( isIPV6 )
     {
         UINT32 remote_addr[4];
-        WinDivertHelperParseIPv6Address(th->gatewayAddress, remote_addr);
+        WinDivertHelperParseIPv6Address(th->listenAddress, remote_addr);
         ipv6_header->DstAddr[0] = htonl(remote_addr[0]);
         ipv6_header->DstAddr[1] = htonl(remote_addr[1]);
         ipv6_header->DstAddr[2] = htonl(remote_addr[2]);
         ipv6_header->DstAddr[3] = htonl(remote_addr[3]);
     }
 
-    // redirect data for device driver
-    WinDivertHelperParseIPv4Address(th->gatewayAddress, send_addr->Flow.RemoteAddr);
-    send_addr->Flow.RemotePort = th->gatewayPort;
+    // redirect data for windivert engine
+    WinDivertHelperParseIPv4Address(th->listenAddress, send_addr->Flow.RemoteAddr);
+    send_addr->Flow.RemotePort = th->listenPort;
 
-    WinDivertHelperParseIPv4Address(th->gatewayAddress, send_addr->Socket.RemoteAddr);
-    send_addr->Socket.RemotePort = th->gatewayPort;
+    WinDivertHelperParseIPv4Address(th->listenAddress, send_addr->Socket.RemoteAddr);
+    send_addr->Socket.RemotePort = th->listenPort;
 
     return TRUE;
 }
 
-// eg. 9443 -> 54731 redirected as 8080 -> 54731 (connection index 54731)
+/**
+ * @brief Handles the redirect logic when packet is from the remote server to the local machine
+ * 
+ * eg. 9443 -> 54731 redirected as 8080 -> 54731 (connection index 54731)
+ * 
+ * In this case the change lies in the source port, which is changed with the original
+ * destination port of the connection, this way the source software does not have to know 
+ * about the presence of the diverter and the connection is transparent as if it was 
+ * connecting directly to the original destination.
+ * 
+ * Note however that the connection is never established from the outside so only "return" packets
+ * are allowed, no new connection can be opened.
+ * 
+ * Note on the recv_addr and send_addr: those are structures used by WinDivert to manage the
+ * correct routing to the device driver indenpendently to the actual content of the packet.
+ * 
+ * @param th           Thread parameters structure pointer
+ * @param ip_header    Parsed IPv4 header pointer to the packet
+ * @param ipv6_header  Parsed IPv46 header pointer to the packet
+ * @param tcp_header   Parsed TCP protocol header pointer to the packet
+ * @param recv_addr    Received address from the windivert device
+ * @param send_addr    Destination address from the windivert device
+ * @return             TRUE if packet was actually redirected, FALSE if dropped
+ */
 BOOL handleServerToLocalPacket(
     threadParameters* th,
     PWINDIVERT_IPHDR ip_header,
@@ -431,6 +557,7 @@ BOOL handleServerToLocalPacket(
     BOOL isIPV4 = ( ip_header != NULL ) ? TRUE : FALSE;
     BOOL isIPV6 = ( ipv6_header != NULL ) ? TRUE : FALSE;
 
+    // Lock the connection in read and acquire the current state of the connection
     if( !acquireLock(FALSE) ) {
         logNativeMessageToGo(th->threadID,  "Lock acquire timeout, dropping packet...");
         return FALSE;
@@ -459,6 +586,7 @@ BOOL handleServerToLocalPacket(
     releaseLock(FALSE);
 
     // TODO: handle FYN
+    // Handle the packet in respect to the expected tcp handshake 
     logNativeMessageToGo(th->threadID,  "Connection state for port %d: %s", portSrcIdx, connStateToString(connState));
     switch( connState ) {
         case STATE_CLOSED:
@@ -466,7 +594,10 @@ BOOL handleServerToLocalPacket(
             return FALSE;
 
         case STATE_SYN:
-            if( !(tcp_header->Syn && tcp_header->Ack) ) {
+            if( tcp_header->Rst ) {
+                logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+                atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
+            } else if( !(tcp_header->Syn && tcp_header->Ack) ) {
                 logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
                 return FALSE;
             }
@@ -474,16 +605,32 @@ BOOL handleServerToLocalPacket(
             break;
 
         case STATE_SYN_ACK:
-            if( !(tcp_header->Ack) ) {
+            if( tcp_header->Rst ) {
+                logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+                atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
+            } else if( !(tcp_header->Ack) ) {
                 logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
                 return FALSE;
             }
             break;
 
+        case STATE_WAIT:
+            if( !(tcp_header->Ack) ) {
+                logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
+                return FALSE;
+            }
+            logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+            atomicUpdateConnectionState( portSrcIdx, STATE_CLOSED );
+            break;
+
         case STATE_OPEN:
-            logNativeMessageToGo(th->threadID,  "" );
+            if( tcp_header->Rst ) {
+                logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+                atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
+            }
     }
 
+    // Only acquire the lock if state was changed
     if( connState != connStatePrev ) {
         logNativeMessageToGo(th->threadID,  "NEW Connection state for port %d: %s", portSrcIdx, connStateToString(connState));
 
@@ -547,16 +694,51 @@ void ipV4PackedToUnpackedNetworkByteOrder( UINT32 packed, UINT32* unpacked ) {
     unpacked[3] = (UINT8)(local & (0x000000FF));
 }
 
-void dumpPacket( PVOID packetData, UINT len ) {
-    printf("%06X ", 0);
+/**
+ * @brief Dumps the contents of the packet to the go log
+ * 
+ * @param thid        Thread ID
+ * @param packetData  Data of the packet
+ * @param len         Length of the data
+ */
+void dumpPacket( int thid, PVOID packetData, UINT len ) {
+    if( !diveterMessagesEnabledToGo || packetData == NULL || len < 1 )
+        return;
+
+    char linebuff[2048] = "";
+    char *currbuff = linebuff;
+
+    currbuff += sprintf(currbuff, "%06X ", 0);
     for( int i=0; i<len; i++ ) {
-        if( i > 0 && i % 16 == 0 )
-            printf("\n%06X ", i-16);
-        printf("%02X ", ((unsigned char*)packetData)[i]);
+        if( i > 0 && i % 16 == 0 ) {
+            currbuff++;
+            (*currbuff) = '\0';
+
+            logNativeMessageToGo( thid, "%s", linebuff );
+
+            currbuff = linebuff;
+            (*currbuff) = '\0';
+
+            currbuff += sprintf(currbuff, "%06X ", i-16);
+        }
+            
+        currbuff += sprintf(currbuff, "%02X ", ((unsigned char*)packetData)[i]);
     }
-    printf("\n");
+    if( len == 0 || len % 16 != 0 ) {
+        currbuff++;
+        (*currbuff) = '\0';
+
+        logNativeMessageToGo( thid, "%s", linebuff );
+    }
 }
 
+/**
+ * @brief Prints messages to the go log printf-style
+ * 
+ * @param thid    Thread ID
+ * @param format  String printf-style to print
+ * @param ...     Successive parameters are treated as in printf
+ */
 void  logNativeMessageToGo(int thid, const char* format...) {
     if( !diveterMessagesEnabledToGo )
         return;
@@ -572,6 +754,14 @@ void  logNativeMessageToGo(int thid, const char* format...) {
     logMessageToGo( buffer );
 }
 
+/**
+ * @brief Enables or disabled the loggin of diverter to go
+ * 
+ * Please be sure to use this only in a debug context, it has very
+ * heavy performance penalty
+ * 
+ * @param enabled   FALSE messages are ignored, TRUE messages are printed
+ */
 void EnableMessageOutputToGo( int enabled ) {
     if( enabled > 0 )
         enabled = TRUE;
@@ -580,6 +770,15 @@ void EnableMessageOutputToGo( int enabled ) {
     diveterMessagesEnabledToGo = enabled;
 }
 
+/**
+ * @brief Acquires a shared lock with a timeout
+ * 
+ * Be sure to always have matching TRUE lock -> TRUE unlock and
+ * FALSE lock -> FALSE unlock or deadlock may occur!
+ * 
+ * @param exclusive   TRUE = write lock, FALSE = read lock
+ * @return BOOLEAN    TRUE = lock acquired, FALSE = lock timeout
+ */
 BOOLEAN acquireLock( BOOLEAN exclusive ) {
     BOOLEAN acquired = FALSE;
     for( int i=0; i<100; i++ ) {
@@ -597,6 +796,11 @@ BOOLEAN acquireLock( BOOLEAN exclusive ) {
     return acquired;
 }
 
+/**
+ * @brief See acquireLock
+ * 
+ * @param exclusive TRUE = write lock, FALSE = read lock
+ */
 void releaseLock( BOOLEAN exclusive ) {
     if( exclusive ) {
         ReleaseSRWLockExclusive(&sharedRWLock);
@@ -606,6 +810,12 @@ void releaseLock( BOOLEAN exclusive ) {
     ReleaseSRWLockShared(&sharedRWLock);
 }
 
+/**
+ * @brief Returns the string representation of the state value
+ * 
+ * @param state         State provided
+ * @return const char*  String value of the input state, "unknown" if invalid value
+ */
 const char* connStateToString( UINT state ) {
     switch( state ) {
         case STATE_CLOSED:
@@ -616,10 +826,22 @@ const char* connStateToString( UINT state ) {
             return "handshaking ack";
         case STATE_OPEN:
             return "open";
+        case STATE_WAIT:
+            return "waiting ack";
     }
     return "unknown";
 }
 
+/**
+ * @brief Recovers the data about the connection in a synchronized way
+ * 
+ * @param sourcePort      Port of the connection
+ * @param origSrcPort     Original source port of the connection
+ * @param origDstPort     Original destination port of the connection
+ * @param origSrcAddress  Original source address of the connection
+ * @param origDstAddress  Original destination address of the connection
+ * @return int            DIVERT_OK if ok, error otherwise
+ */
 int  GetConnectionData( UINT sourcePort, UINT* origSrcPort, UINT* origDstPort, 
                                char* origSrcAddress, char* origDstAddress )
 {
