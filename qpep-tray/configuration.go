@@ -17,13 +17,16 @@ import (
 
 const (
 	CONFIGFILENAME = "qpep-tray.yml"
+	CONFIGPATH     = "qpep-tray"
 	DEFAULTCONFIG  = `acks: 10
 ackDelay: 25
 congestion: 4
 decimate: 4
 minBeforeDecimation: 100
 gateway: 198.18.0.254
-port: 9443
+port: 443
+listenaddress: 192.168.1.10
+listenport: 9443
 multistream: true
 verbose: false
 varAckDelay: 0
@@ -39,6 +42,8 @@ type QPepConfigYAML struct {
 	DelayDecimate    int    `yaml:"minBeforeDecimation"`
 	GatewayHost      string `yaml:"gateway"`
 	GatewayPort      int    `yaml:"port"`
+	ListenHost       string `yaml:"listenaddress"`
+	ListenPort       int    `yaml:"listenport"`
 	MultiStream      bool   `yaml:"multistream"`
 	Verbose          bool   `yaml:"verbose"`
 	VarAckDelay      int    `yaml:"varAckDelay"`
@@ -57,7 +62,7 @@ func readConfiguration() (outerr error) {
 	}()
 
 	basedir := os.Getenv(BASEDIR_ENVIRONMENTVAR)
-	confdir := filepath.Join(basedir, ".qpep-tray")
+	confdir := filepath.Join(basedir, CONFIGPATH)
 	if _, err := os.Stat(confdir); errors.Is(err, os.ErrNotExist) {
 		os.Mkdir(confdir, 0664)
 	}
@@ -92,7 +97,7 @@ func readConfiguration() (outerr error) {
 
 func getConfFile() string {
 	basedir := os.Getenv(BASEDIR_ENVIRONMENTVAR)
-	return filepath.Join(basedir, ".qpep-tray", CONFIGFILENAME)
+	return filepath.Join(basedir, CONFIGPATH, CONFIGFILENAME)
 }
 
 func openConfigurationWithOSEditor() {

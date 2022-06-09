@@ -15,7 +15,7 @@ const (
 
 func getClientCommand() *exec.Cmd {
 	exeFile := filepath.Join(ExeDir, EXENAME)
-	handle, _ := syscall.GetCurrentProcess()
+	//handle, _ := syscall.GetCurrentProcess()
 
 	attr := &syscall.SysProcAttr{
 		HideWindow: true,
@@ -27,6 +27,8 @@ func getClientCommand() *exec.Cmd {
 			"--minBeforeDecimation %d "+
 			"--gateway \"%s\" "+
 			"--port %d "+
+			"--listenaddress \"%s\" "+
+			"--listenport %d "+
 			"--multistream %v "+
 			"--verbose %v "+
 			"--varAckDelay %d "+
@@ -38,12 +40,12 @@ func getClientCommand() *exec.Cmd {
 			qpepConfig.DelayDecimate,
 			qpepConfig.GatewayHost,
 			qpepConfig.GatewayPort,
+			qpepConfig.ListenHost,
+			qpepConfig.ListenPort,
 			qpepConfig.MultiStream,
 			qpepConfig.Verbose,
 			qpepConfig.VarAckDelay,
 			qpepConfig.WinDivertThreads),
-
-		ParentProcess: handle,
 	}
 
 	cmd := exec.Command(exeFile)
@@ -62,7 +64,7 @@ func getClientCommand() *exec.Cmd {
 
 func getServerCommand() *exec.Cmd {
 	exeFile := filepath.Join(ExeDir, EXENAME)
-	handle, _ := syscall.GetCurrentProcess()
+	//handle, _ := syscall.GetCurrentProcess()
 
 	attr := &syscall.SysProcAttr{
 		HideWindow: true,
@@ -88,8 +90,6 @@ func getServerCommand() *exec.Cmd {
 			qpepConfig.Verbose,
 			qpepConfig.VarAckDelay,
 			qpepConfig.WinDivertThreads),
-
-		ParentProcess: handle,
 	}
 
 	cmd := exec.Command(exeFile)
