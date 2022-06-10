@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/getlantern/systray"
+	"github.com/parvit/qpep/qpep-tray/icons"
 
 	. "github.com/sqweek/dialog"
 )
@@ -40,13 +41,13 @@ var cancelWatchdog context.CancelFunc
 func onReady() {
 	contextWatchdog, cancelWatchdog = startReloadConfigurationWatchdog()
 
-	systray.SetTemplateIcon(MainIconData, MainIconData)
+	systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
 	systray.SetTitle("QPep")
 	systray.SetTooltip("TCP Accelerator")
 
 	// We can manipulate the systray in other goroutines
 	go func() {
-		systray.SetTemplateIcon(MainIconData, MainIconData)
+		systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
 		systray.SetTitle("QPep TCP accelerator")
 		systray.SetTooltip("QPep TCP accelerator")
 
@@ -59,9 +60,9 @@ func onReady() {
 		mQuit := systray.AddMenuItem("Quit", "Stop all and quit the whole app")
 
 		// Sets the icon of a menu item.
-		mQuit.SetIcon(ExitIconData)
-		mConfig.SetIcon(ConfigIconData)
-		mConfigRefresh.SetIcon(RefreshIconData)
+		mQuit.SetIcon(icons.ExitIconData)
+		mConfig.SetIcon(icons.ConfigIconData)
+		mConfigRefresh.SetIcon(icons.RefreshIconData)
 
 		mClientActive := false
 		mServerActive := false
