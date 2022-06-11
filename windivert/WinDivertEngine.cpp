@@ -420,8 +420,8 @@ BOOL handleLocalToServerPacket(
             break;
 
         case STATE_SYN:
-            if( tcp_header->Rst ) {
-                logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
+            if( tcp_header->Fin || tcp_header->Rst ) {
+                logNativeMessageToGo(th->threadID,  "Reset/Fin received for port %d, closing connection", portSrcIdx);
                 atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
             } else {
                 logNativeMessageToGo(th->threadID,  "Out-of-sequence packet for handshake, dropping...");
@@ -429,7 +429,7 @@ BOOL handleLocalToServerPacket(
             }
 
         case STATE_SYN_ACK:
-            if( tcp_header->Rst ) {
+            if( tcp_header->Fin || tcp_header->Rst ) {
                 logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
                 atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
             } else if( !tcp_header->Ack ) {
@@ -449,7 +449,7 @@ BOOL handleLocalToServerPacket(
             break;
 
         case STATE_OPEN:
-            if( tcp_header->Rst ) {
+            if( tcp_header->Fin || tcp_header->Rst ) {
                 logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
                 atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
             }
@@ -594,7 +594,7 @@ BOOL handleServerToLocalPacket(
             return FALSE;
 
         case STATE_SYN:
-            if( tcp_header->Rst ) {
+            if( tcp_header->Fin || tcp_header->Rst ) {
                 logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
                 atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
             } else if( !(tcp_header->Syn && tcp_header->Ack) ) {
@@ -605,7 +605,7 @@ BOOL handleServerToLocalPacket(
             break;
 
         case STATE_SYN_ACK:
-            if( tcp_header->Rst ) {
+            if( tcp_header->Fin || tcp_header->Rst ) {
                 logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
                 atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
             } else if( !(tcp_header->Ack) ) {
@@ -624,7 +624,7 @@ BOOL handleServerToLocalPacket(
             break;
 
         case STATE_OPEN:
-            if( tcp_header->Rst ) {
+            if( tcp_header->Fin || tcp_header->Rst ) {
                 logNativeMessageToGo(th->threadID,  "Reset received for port %d, closing connection", portSrcIdx);
                 atomicUpdateConnectionState( portSrcIdx, STATE_WAIT );
             }
