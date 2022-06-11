@@ -39,6 +39,18 @@ if %BUILD32% EQU 0 (
     )
 )
 
+ECHO [Requirements check: GO]
+go version
+if %ERRORLEVEL% GEQ 1 goto fail
+
+ECHO [Requirements check: MSBuild]
+msbuild --version
+if %ERRORLEVEL% GEQ 1 goto fail
+
+ECHO [Requirements check: Wix Toolkit]
+heat -help
+if %ERRORLEVEL% GEQ 1 goto fail
+
 ECHO [Cleanup]
 DEL /S /Q build 2> NUL
 RMDIR build\x64 2> NUL
