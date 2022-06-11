@@ -46,3 +46,12 @@ func stopServer() error {
 	InfoMsg("Server stopped")
 	return nil
 }
+
+func reloadServerIfRunning() {
+	if serverCmd == nil {
+		return
+	}
+
+	stopServer()
+	startServer()
+}

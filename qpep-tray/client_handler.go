@@ -46,3 +46,12 @@ func stopClient() error {
 	InfoMsg("Client stopped")
 	return nil
 }
+
+func reloadClientIfRunning() {
+	if clientCmd == nil {
+		return
+	}
+
+	stopClient()
+	startClient()
+}

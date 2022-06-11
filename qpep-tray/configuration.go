@@ -133,14 +133,20 @@ func startReloadConfigurationWatchdog() (context.Context, context.CancelFunc) {
 				break CHECKLOOP
 
 			case <-time.After(1 * time.Second):
-				if stat, err := os.Stat(confFile); err == nil {
-					if !stat.ModTime().After(lastModTime) {
-						continue
-					}
-					lastModTime = stat.ModTime()
-					if ok := ConfirmMsg("Do you want to reload the configuration?"); ok {
-						readConfiguration()
-					}
+				stat, err := os.Stat(confFile)
+				if err != nil {
+					continue
+				}
+				if !stat.ModTime().After(lastModTime) {
+					continue
+				}
+				lastModTime = stat.ModTime()
+				if ok := ConfirmMsg("Do you want to reload the configuration?"); !ok {
+					continue
+				}
+				if readConfiguration() == nil {
+					reloadClientIfRunning()
+					reloadServerIfRunning()
 				}
 				continue
 			}
