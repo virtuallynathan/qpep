@@ -1,6 +1,9 @@
 # Binaries for programs and plugins
 *.exe
 *.exe~
+*.lib
+*.sys
+*.json
 *.dll
 *.so
 *.dylib
@@ -13,3 +16,12 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+src
+build
+obj
+bin
+.vs
+
+# generated file
+binaries.wxs
+license.wxs

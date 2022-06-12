@@ -1,4 +1,5 @@
-// +build linux android
+//go:build linux
+// +build linux
 
 package client
 

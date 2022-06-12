@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" UpgradeCode="{A61174C8-632E-41AC-8AF4-3C27F455298F}" Version="1.0.0.0" Language="1033" Name="QPep" Manufacturer="VirtuallyNathan">
+        <Package InstallerVersion="300" Compressed="yes"/>
+        <Media Id="1" Cabinet="qpep.cab" EmbedCab="yes" />
+
+        <MajorUpgrade
+            DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit.">
+
+        <Icon Id="installer.ico" SourceFile="$(var.ProjectDir)\installer.ico" />
+        <Icon Id="applications_internet.ico" SourceFile="$(var.ProjectDir)\applications-internet.ico" />
+
+        <Property Id="ARPPRODUCTICON" Value="installer.ico" />
+        <Property Id="WIXUI_INSTALLDIR" Value="TARGETDIR" />
+
+        <WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)\LICENSE.rtf" />
+        <WixVariable Id="WixUIBannerBmp" Value="$(var.ProjectDir)\WixUIBannerBmp.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="$(var.ProjectDir)\WixUIDialogBmp.bmp" />
+
+        <SetDirectory Id="TARGETDIR" Value="[ProgramFilesFolder][ProductName]"/>
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="APPLICATIONROOTDIRECTORY" Name="QPep" >
+                    <Directory Id="INSTALLDIRX86" Name="x86" />
+                    <Directory Id="INSTALLDIRX64" Name="x64" />
+                </Directory>
+            </Directory>
+
+            <Directory Id="DesktopFolder" Name="Desktop">
+                <Component Id="SHORTCUTSX86" Guid="{77078330-A81C-405D-9E76-A98FC55F6DDE}">
+                    <Shortcut Id="QPepDesktopShortcutX86"
+                        Name="QPep 32bit"
+                        Description="TCP traffic accelerator (32bit)"
+                        Target="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe Start qpep-tray.exe -Verb Runas"
+                        Icon="applications_internet.ico"
+                        WorkingDirectory="INSTALLDIRX86"/>
+                    <RemoveFolder Id="DesktopFolder" On="uninstall"/>
+                    <RegistryValue
+                        Root="HKCU"
+                        Key="Software\VirtuallyNathan\QPep"
+                        Name="installed"
+                        Type="integer"
+                        Value="1"
+                        KeyPath="yes"/>
+                </Component>
+
+                <Component Id="SHORTCUTSX64" Guid="{F182D5E8-FE26-4F0D-8B1B-41BCDC4943C9}">
+                    <Shortcut Id="QPepDesktopShortcutX64"
+                        Name="QPep 64bit"
+                        Description="TCP traffic accelerator (64bit)"
+                        Target="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe Start qpep-tray.exe -Verb Runas"
+                        Icon="applications_internet.ico"
+                        WorkingDirectory="INSTALLDIRX64"/>
+                    <RegistryValue
+                        Root="HKCU"
+                        Key="Software\VirtuallyNathan\QPep"
+                        Name="installed"
+                        Type="integer"
+                        Value="1"
+                        KeyPath="yes"/>
+                </Component>
+            </Directory>
+        </Directory>
+
+        <Feature Id="MainApplication" Title="Main Application" Level="1" ConfigurableDirectory="TARGETDIR">
+            <ComponentGroupRef Id="GROUPBIN" />
+
+            <!-- 1001 means disabled by default -->
+            <Feature Id="Arch32bit" Title="32bit Application shortcut" Level="1001" >
+                <ComponentRef Id="SHORTCUTSX86" />
+            </Feature>
+            <Feature Id="Arch64bit" Title="64bit Application shortcut" Level="1">
+                <ComponentRef Id="SHORTCUTSX64" />
+            </Feature>
+        </Feature>
+
+        <UI>
+          <UIRef Id="WixUI_FeatureTree" />
+        </UI>
+    
+    </Product>
+</Wix>

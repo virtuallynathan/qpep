@@ -2,6 +2,7 @@ package shared
 
 import (
 	"flag"
+	"os"
 )
 
 type QuicConfig struct {
@@ -14,6 +15,11 @@ type QuicConfig struct {
 	MinReceivedBeforeAckDecimation int
 	ClientFlag                     bool
 	GatewayIP                      string
+	GatewayPort                    int
+	ListenIP                       string
+	ListenPort                     int
+	WinDivertThreads               int
+	Verbose                        bool
 }
 
 var (
@@ -29,9 +35,19 @@ func init() {
 	varAckDelayFlag := flag.Float64("varAckDelay", 0.25, "Variable number of miliseconds to hold back an ack for decimation, as multiple of RTT")
 	minReceivedBeforeAckDecimationFlag := flag.Int("minBeforeDecimation", 100, "Minimum number of packets before initiating ack decimation")
 	clientFlag := flag.Bool("client", false, "a bool")
-	gatewayFlag := flag.String("gateway", "198.18.0.254", "IP address of gateway running qpep")
+	gatewayHostFlag := flag.String("gateway", "198.18.0.254", "IP address of gateway running qpep server")
+	gatewayPortFlag := flag.Int("port", 443, "Port of gateway running qpep server")
+	listenHostFlag := flag.String("listenaddress", "127.0.0.1", "IP listen address of qpep client")
+	listenPortFlag := flag.Int("listenport", 9443, "Listen Port of qpep client")
+	winDiverterThreads := flag.Int("threads", 1, "Worker threads for windivert engine (min 1, max 8)")
+	verbose := flag.Bool("verbose", false, "Outputs data about diverted connections for debug")
 
 	flag.Parse()
+	if !flag.Parsed() {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	QuicConfiguration = QuicConfig{
 		AckElicitingPacketsBeforeAck:   *ackElicitingFlag,
 		AckDecimationDenominator:       *ackDecimationFlag,
@@ -41,6 +57,11 @@ func init() {
 		VarAckDelay:                    *varAckDelayFlag,
 		MinReceivedBeforeAckDecimation: *minReceivedBeforeAckDecimationFlag,
 		ClientFlag:                     *clientFlag,
-		GatewayIP:                      *gatewayFlag,
+		GatewayIP:                      *gatewayHostFlag,
+		GatewayPort:                    *gatewayPortFlag,
+		ListenIP:                       *listenHostFlag,
+		ListenPort:                     *listenPortFlag,
+		WinDivertThreads:               *winDiverterThreads,
+		Verbose:                        *verbose,
 	}
 }

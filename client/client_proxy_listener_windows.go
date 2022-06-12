@@ -1,14 +1,10 @@
-//go:build darwin
-// +build darwin
+//go:build windows
+// +build windows
 
 package client
 
 import (
-	"fmt"
 	"net"
-	"syscall"
-
-	"golang.org/x/sys/unix"
 )
 
 type ClientProxyListener struct {
@@ -44,16 +40,6 @@ func NewClientProxyListener(network string, laddr *net.TCPAddr) (net.Listener, e
 		return nil, err
 	}
 
-	//Find associated file descriptor for listener to set socket options on
-	fileDescriptorSource, err := listener.File()
-	if err != nil {
-		return nil, &net.OpError{Op: "ClientListener", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("get file descriptor: %s", err)}
-	}
-	defer fileDescriptorSource.Close()
-
-	if err = syscall.SetsockoptInt(int(fileDescriptorSource.Fd()), syscall.IPPROTO_TCP, unix.TCP_FASTOPEN, 1); err != nil {
-		return nil, &net.OpError{Op: "listen", Net: network, Source: nil, Addr: laddr, Err: fmt.Errorf("set socket option: TCP_FASTOPEN: %s", err)}
-	}
 	//return a derived TCP listener object with TCProxy support
 	return &ClientProxyListener{base: listener}, nil
 }

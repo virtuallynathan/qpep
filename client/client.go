@@ -5,24 +5,28 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
-	"os/signal"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
-	"github.com/virtuallynathan/qpep/shared"
+	"github.com/parvit/qpep/shared"
+	"github.com/parvit/qpep/windivert"
 	"golang.org/x/net/context"
 )
 
 var (
 	proxyListener       net.Listener
-	ClientConfiguration = ClientConfig{ListenHost: "0.0.0.0", ListenPort: 8080,
-		GatewayHost: "198.18.0.254", GatewayPort: 443,
+	ClientConfiguration = ClientConfig{
+		ListenHost: "0.0.0.0", ListenPort: 9443,
+		GatewayHost: "198.56.1.10", GatewayPort: 443,
 		QuicStreamTimeout: 2, MultiStream: shared.QuicConfiguration.MultiStream,
 		ConnectionRetries: 3,
-		IdleTimeout:       time.Duration(300) * time.Second}
+		IdleTimeout:       time.Duration(300) * time.Second,
+		WinDivertThreads:  1,
+		Verbose:           false,
+	}
 	quicSession             quic.Session
 	QuicClientConfiguration = quic.Config{
 		MaxIncomingStreams: 40000,
@@ -38,46 +42,71 @@ type ClientConfig struct {
 	MultiStream       bool
 	IdleTimeout       time.Duration
 	ConnectionRetries int
+	WinDivertThreads  int
+	Verbose           bool
 }
 
-func RunClient() {
+func RunClient(ctx context.Context) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+		if proxyListener != nil {
+			proxyListener.Close()
+		}
+	}()
 	log.Println("Starting TCP-QPEP Tunnel Listener")
 	log.Printf("Binding to TCP %s:%d", ClientConfiguration.ListenHost, ClientConfiguration.ListenPort)
 	var err error
 	proxyListener, err = NewClientProxyListener("tcp", &net.TCPAddr{IP: net.ParseIP(ClientConfiguration.ListenHost),
 		Port: ClientConfiguration.ListenPort})
 	if err != nil {
-		log.Fatalf("Encountered error when binding client proxy listener: %s", err)
+		log.Printf("Encountered error when binding client proxy listener: %s", err)
+		return
 	}
-
-	defer proxyListener.Close()
 
 	go ListenTCPConn()
 
-	interruptListener := make(chan os.Signal)
-	signal.Notify(interruptListener, os.Interrupt)
-	<-interruptListener
-	log.Println("Exiting...")
-	os.Exit(1)
+	for {
+		select {
+		case <-ctx.Done():
+			proxyListener.Close()
+			return
+		case <-time.After(10 * time.Millisecond):
+			continue
+		}
+	}
 }
 
 func ListenTCPConn() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	for {
 		conn, err := proxyListener.Accept()
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
 				log.Printf("Temporary error when accepting connection: %s", netErr)
 			}
-			log.Fatalf("Unrecoverable error while accepting connection: %s", err)
+			log.Printf("Unrecoverable error while accepting connection: %s", err)
 			return
 		}
 
 		go handleTCPConn(conn)
 	}
-
 }
 
 func handleTCPConn(tcpConn net.Conn) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
 	log.Printf("Accepting TCP connection from %s with destination of %s", tcpConn.RemoteAddr().String(), tcpConn.LocalAddr().String())
 	defer tcpConn.Close()
 	var quicStream quic.Stream = nil
@@ -122,12 +151,27 @@ func handleTCPConn(tcpConn net.Conn) {
 	streamWait.Add(2)
 
 	//Set our custom header to the QUIC session so the server can generate the correct TCP handshake on the other side
-	sessionHeader := shared.QpepHeader{SourceAddr: tcpConn.RemoteAddr().(*net.TCPAddr), DestAddr: tcpConn.LocalAddr().(*net.TCPAddr)}
+	sessionHeader := shared.QpepHeader{
+		SourceAddr: tcpConn.RemoteAddr().(*net.TCPAddr),
+		DestAddr:   tcpConn.LocalAddr().(*net.TCPAddr),
+	}
+
+	diverted, srcPort, dstPort, srcAddress, dstAddress := windivert.GetConnectionStateData(sessionHeader.SourceAddr.Port)
+	if diverted == windivert.DIVERT_OK {
+		log.Printf("Diverted connection: %v:%v %v:%v", srcAddress, srcPort, dstAddress, dstPort)
+
+		sessionHeader.DestAddr = &net.TCPAddr{
+			IP:   net.ParseIP(dstAddress),
+			Port: dstPort,
+		}
+	}
+
+	log.Printf("Sending QUIC header to server, SourceAddr: %v / DestAddr: %v", sessionHeader.SourceAddr, sessionHeader.DestAddr)
+
 	_, err := quicStream.Write(sessionHeader.ToBytes())
 	if err != nil {
 		log.Printf("Error writing to quic stream: %s", err.Error())
 	}
-	log.Printf("Sent QUIC header to server")
 
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
 		_, err := io.Copy(dst, src)
