@@ -11,7 +11,7 @@ Following here are instructions for manual building the additional parts on wind
 ### Main module
 For building the qpep package you'll need:
 - Go 1.16.x
-- A C/C++ complier compatible with CGO eg. [MinGW64](https://www.mingw-w64.org/)
+- A C/C++ complier compatible with CGO eg. [MinGW64](https://www.mingw-w64.org/). Specifically, download [this](ttps://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/8.1.0/threads-posix/seh/), extract the files, and add the "bin" directory to the PATH.
 
 After setting the go and c compiler in the PATH, be sure to also check that `go env` reports that:
 - `CGO_ENABLED=1` 
@@ -34,7 +34,7 @@ The .sys file are windows user mode drivers taken from the [WinDivert](https://r
 _There is no need to install those manually_ and please don't do so as it might mess up the loading of the driver when running qpep.
 
 ### Qpep-tray module
-This module compiles without additional dependencies with :
+This module compiles without additional dependencies so just cd into qpep-tray directory and run:
 `go build -ldflags -H=windowsgui`
 
 The flags `-ldflags -H=windowsgui` allow the binary to run without a visible console in the background.
