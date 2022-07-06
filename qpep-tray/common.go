@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime/debug"
 	"time"
 
 	"github.com/getlantern/systray"
@@ -47,9 +48,44 @@ func onReady() {
 
 	// We can manipulate the systray in other goroutines
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("PANIC: %v", err)
+				debug.PrintStack()
+				cancelWatchdog()
+			}
+		}()
+
 		systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
 		systray.SetTitle("QPep TCP accelerator")
 		systray.SetTooltip("QPep TCP accelerator")
+
+		go func() {
+			defer func() {
+				_ = recover()
+			}()
+
+			i := 0
+			for {
+				select {
+				case <-time.After(1 * time.Second):
+					i++
+					if i > 15 {
+						systray.SetTooltip("QPep TCP accelerator - Status: Connected")
+						systray.SetTemplateIcon(icons.MainIconConnected, icons.MainIconConnected)
+					} else if i%2 == 0 {
+						systray.SetTooltip("QPep TCP accelerator - Status: Connecting...")
+						systray.SetTemplateIcon(icons.MainIconWaiting, icons.MainIconWaiting)
+					} else {
+						systray.SetTooltip("QPep TCP accelerator - Status: Disconnected")
+						systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
+					}
+					continue
+				case <-contextWatchdog.Done():
+					return
+				}
+			}
+		}()
 
 		mConfig := systray.AddMenuItem("Edit Configuration", "Open configuration for next client / server executions")
 		mConfigRefresh := systray.AddMenuItem("Reload Configuration", "Reload configuration from disk and restart the service")
