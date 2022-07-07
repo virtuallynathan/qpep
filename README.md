@@ -1,3 +1,6 @@
+# Background context
+See https://docs.projectfaster.org/use-cases/vpn-over-satellite/vpn-client-software/optimizing-client-software
+
 # qpep
 Working on improving the Go standalone implementation of qpep, improving documentation. Original full repo: https://github.com/ssloxford/qpep
 
