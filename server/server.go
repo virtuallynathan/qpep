@@ -23,7 +23,11 @@ import (
 )
 
 var (
-	serverConfig = ServerConfig{ListenHost: "0.0.0.0", ListenPort: 443}
+	ServerConfiguration = ServerConfig{
+		ListenHost: "0.0.0.0",
+		ListenPort: 443,
+		APIPort:    444,
+	}
 	quicListener quic.Listener
 	quicSession  quic.Session
 )
@@ -31,6 +35,7 @@ var (
 type ServerConfig struct {
 	ListenHost string
 	ListenPort int
+	APIPort    int
 }
 
 func RunServer(ctx context.Context) {
@@ -44,7 +49,10 @@ func RunServer(ctx context.Context) {
 		}
 	}()
 
-	listenAddr := serverConfig.ListenHost + ":" + strconv.Itoa(serverConfig.ListenPort)
+	// update configuration from flags
+	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
+
+	listenAddr := ServerConfiguration.ListenHost + ":" + strconv.Itoa(ServerConfiguration.ListenPort)
 	log.Printf("Opening QPEP Server on: %s", listenAddr)
 	var err error
 	quicListener, err = quic.ListenAddr(listenAddr, generateTLSConfig(), &client.QuicClientConfiguration)

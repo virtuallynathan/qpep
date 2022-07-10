@@ -25,6 +25,7 @@ decimate: 4
 minBeforeDecimation: 100
 gateway: 198.18.0.254
 port: 443
+gatewayAPIPort: 444
 listenaddress: 192.168.1.10
 listenport: 9443
 multistream: true
@@ -42,6 +43,7 @@ type QPepConfigYAML struct {
 	DelayDecimate    int    `yaml:"minBeforeDecimation"`
 	GatewayHost      string `yaml:"gateway"`
 	GatewayPort      int    `yaml:"port"`
+	GatewayAPIPort   int    `yaml:"gatewayAPIPort"`
 	ListenHost       string `yaml:"listenaddress"`
 	ListenPort       int    `yaml:"listenport"`
 	MultiStream      bool   `yaml:"multistream"`

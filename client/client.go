@@ -57,6 +57,14 @@ func RunClient(ctx context.Context) {
 		}
 	}()
 	log.Println("Starting TCP-QPEP Tunnel Listener")
+
+	// update configuration from flags
+	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
+	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
+	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
+	ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
+	ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
+
 	log.Printf("Binding to TCP %s:%d", ClientConfiguration.ListenHost, ClientConfiguration.ListenPort)
 	var err error
 	proxyListener, err = NewClientProxyListener("tcp", &net.TCPAddr{IP: net.ParseIP(ClientConfiguration.ListenHost),

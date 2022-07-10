@@ -1,9 +1,87 @@
+# Background context
+See https://docs.projectfaster.org/use-cases/vpn-over-satellite/vpn-client-software/optimizing-client-software. This repository includes the Windows port of qpep.
+
 # qpep
 Working on improving the Go standalone implementation of qpep, improving documentation. Original full repo: https://github.com/ssloxford/qpep
 
 Basic testing:
 * Ziply Fiber Gigabit in Seattle pulling 1GB test file from DigitalOcean AMS3: ~1.6MB/s
 * Ziply Fiber Gigabit in Seattle pulling 1GB test file via qpep running in DigitalOcean AMS3, grabbing 1GB file from AMS3: 10-25MB/s. Slows down over the course of the download. 
+
+# Windows Build
+Following here are instructions for manual building the additional parts on windows platform.
+
+### Main module
+For building the qpep package you'll need:
+- Go 1.16.x
+- A C/C++ complier compatible with CGO eg. [MinGW64](https://www.mingw-w64.org/). Specifically, download [this](ttps://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/8.1.0/threads-posix/seh/), extract the files, and add the "bin" directory to the PATH.
+
+After setting the go and c compiler in the PATH, be sure to also check that `go env` reports that:
+- `CGO_ENABLED=1` 
+- `CC=<path to c compiler exe>`
+- `CXX=<path to c++ compiler exe>`
+
+After that the simple `go build` will build the executable.
+To run it, first copy the following files to the executable folder (if you are on 64 bit platform):
+- x64\WinDivert.dll
+- x64\WinDivert.sys
+
+If instead your system is 32bits than copy:
+- x86\WinDivert.dll
+- x86\WinDivert32.sys
+- x86\WinDivert64.sys (alternatively to support running the 32bits executable on x64 architecture)
+
+#### Note about the windows drivers
+The .sys file are windows user mode drivers taken from the [WinDivert](https://reqrypt.org/windivert.html) project site, they install automatically when the qpep client runs and are automatically removed when the program exits.
+
+_There is no need to install those manually_ and please don't do so as it might mess up the loading of the driver when running qpep.
+
+### Qpep-tray module
+This module compiles without additional dependencies so just cd into qpep-tray directory and run:
+`go build -ldflags -H=windowsgui`
+
+The flags `-ldflags -H=windowsgui` allow the binary to run without a visible console in the background.
+It should be placed in the same folder as the qpep main executable and will need to be launched with administrative priviledges to allow the qpep client to work properly.
+
+The configuration file is created automatically on first launch under `%APPDATA%\qpeptray\` and is a yaml file with the following defaults:
+```
+acks: 10
+ackDelay: 25
+congestion: 4
+decimate: 4
+minBeforeDecimation: 100
+gateway: 198.18.0.254
+port: 443
+listenaddress: 192.168.1.10
+listenport: 9443
+multistream: true
+verbose: false
+varAckDelay: 0
+threads: 1
+```
+
+Information about their meaning and usage can be found running the client with `--help`.
+The file can also be opened directly from the tray icon selecting "*Edit Configuration*", upon change detected to it, the user will be asked if it wants to reload the configuration relaunching the client / server.
+
+The module can also be built on linux and will work the same except for the menu icons which fail to load currently on that platform (by current limitation of the underlying go package).
+
+### Generating the Windows MSI Installer
+Additional dependencies are required to build the msi package:
+- Windows Visual Studio 2019 (Community is ok)
+- [WiX Toolkit 3.11.2](https://wixtoolset.org/releases/)
+
+The `installer.bat` script is the recommended way to build it as it takes care of preparing the files necessary and building all the packages required.
+
+Supported flags for it's invocation are:
+- `--build64` Will prepare the 64bits version of the executables
+- `--build32` Will prepare the 32bits version of the executables
+- `--rebuild` Will only rebuild the installer without building the binaries again
+
+At least one between `--build64` and `--build32` must be specified, `--rebuild` can only be given as a second parameter.
+
+The resulting package will be created under the `build/` subdirectory.
+
+After installation there is an additional requirement to launch the qpep-tray binary via the shortcut which is powershell, this way the tray program can ask for UAC elevation immediately and run with the elevated privileges the client requires to work.
 
 # Using Standalone QPEP
  
