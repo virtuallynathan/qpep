@@ -23,6 +23,10 @@ type QuicConfig struct {
 	Verbose                        bool
 }
 
+const (
+	ACK_FLAG = "acks"
+)
+
 var (
 	QuicConfiguration QuicConfig
 )
@@ -38,7 +42,7 @@ func init() {
 	clientFlag := flag.Bool("client", false, "a bool")
 	gatewayHostFlag := flag.String("gateway", "198.18.0.254", "IP address of gateway running qpep server")
 	gatewayPortFlag := flag.Int("port", 443, "Port of gateway running qpep server")
-	gatewayAPIPortFlag := flag.Int("gatewayapiport", 444, "IP address of gateway running qpep server")
+	gatewayAPIPortFlag := flag.Int("apiport", 444, "IP address of gateway running qpep server")
 	listenHostFlag := flag.String("listenaddress", "127.0.0.1", "IP listen address of qpep client")
 	listenPortFlag := flag.Int("listenport", 9443, "Listen Port of qpep client")
 	winDiverterThreads := flag.Int("threads", 1, "Worker threads for windivert engine (min 1, max 8)")

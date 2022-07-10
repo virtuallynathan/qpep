@@ -26,6 +26,7 @@ func getClientCommand() *exec.Cmd {
 		"--minBeforeDecimation", fmt.Sprintf("%d", qpepConfig.DelayDecimate),
 		"--gateway", fmt.Sprintf("%s", qpepConfig.GatewayHost),
 		"--port", fmt.Sprintf("%d", qpepConfig.GatewayPort),
+		"--apiport", fmt.Sprintf("%d", qpepConfig.GatewayAPIPort),
 		"--listenaddress", fmt.Sprintf("%s", qpepConfig.ListenHost),
 		"--listenport", fmt.Sprintf("%d", qpepConfig.ListenPort),
 		"--multistream", fmt.Sprintf("%v", qpepConfig.MultiStream),

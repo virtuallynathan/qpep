@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -89,6 +90,7 @@ func ListenQuicSession() {
 			log.Printf("Unrecoverable error while accepting QUIC session: %s", err)
 			return
 		}
+		Statistics.Increment(TOTAL_CONNECTIONS)
 		go ListenQuicConn(quicSession)
 	}
 }
@@ -99,6 +101,7 @@ func ListenQuicConn(quicSession quic.Session) {
 			log.Printf("PANIC: %v", err)
 			debug.PrintStack()
 		}
+		Statistics.Decrement(TOTAL_CONNECTIONS)
 	}()
 	for {
 		stream, err := quicSession.AcceptStream(context.Background())
@@ -130,19 +133,25 @@ func HandleQuicStream(stream quic.Stream) {
 }
 
 func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
+	remoteConnIP := fmt.Sprintf(QUIC_CONN, qpepHeader.SourceAddr.IP)
+
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("PANIC: %v", err)
 			debug.PrintStack()
 		}
+		Statistics.Decrement(remoteConnIP)
 	}()
+
+	Statistics.Increment(remoteConnIP)
+
 	log.Printf("Opening TCP Connection to %s\n", qpepHeader.DestAddr.String())
 	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), time.Duration(10)*time.Second)
 	if err != nil {
 		log.Printf("Unable to open TCP connection from QPEP stream: %s", err)
 		return
 	}
-	log.Printf("Opened TCP Conn")
+	log.Printf("Opened TCP Conn %s -> %s\n", qpepHeader.SourceAddr.String(), qpepHeader.DestAddr.String())
 
 	var streamWait sync.WaitGroup
 	streamWait.Add(2)
