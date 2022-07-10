@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -94,6 +95,7 @@ func (r *APIRouter) registerHandlers() {
 	r.handler.MethodNotAllowed = &methodsNotAllowedHandler{}
 
 	r.handler.HandleMethodNotAllowed = true
+	r.handler.GET("/api/v1/echo", apiHeaders(apiEcho))
 	r.handler.GET("/api/v1/status/:addr", apiHeaders(apiStatus))
 }
 
@@ -117,6 +119,28 @@ func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
+}
+
+func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	dataAddr := strings.Split(r.RemoteAddr, ":")
+	port, _ := strconv.ParseInt(dataAddr[1], 10, 64)
+
+	data, err := json.Marshal(EchoResponse{
+		Address: dataAddr[0],
+		Port:    int(port),
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+type EchoResponse struct {
+	Address string `json:"Address"`
+	Port    int    `json:"Port"`
 }
 
 type StatusReponse struct {
