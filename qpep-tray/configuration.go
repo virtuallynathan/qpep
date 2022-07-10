@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/parvit/qpep/api"
 	"github.com/skratchdot/open-golang/open"
 	"gopkg.in/yaml.v3"
 )
@@ -129,6 +130,13 @@ func startReloadConfigurationWatchdog() (context.Context, context.CancelFunc) {
 
 	CHECKLOOP:
 		for {
+			var resp = api.RequestEcho()
+			if resp != nil {
+				log.Printf("Server Response: %v\n", resp.Address, resp.Port)
+			} else {
+				log.Printf("Server Response: nil\n")
+			}
+
 			select {
 			case <-ctx.Done():
 				log.Println("Stopping configfile watchdog")

@@ -1,10 +1,7 @@
-//go:build linux,cgo
-// +build linux,cgo
+//go:build !cgo
+// +build !cgo
 
 package windivert
-
-//#cgo linux CPPFLAGS: -I include/
-import "C"
 
 const (
 	DIVERT_OK                  = 0
