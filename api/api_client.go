@@ -6,12 +6,13 @@ import (
 	"io"
 	"log"
 	"net/http"
-
-	"github.com/parvit/qpep/shared"
+	"time"
 )
 
-func RequestEcho() *EchoResponse {
-	addr := fmt.Sprintf("http://%s:%d/%s", shared.QuicConfiguration.GatewayIP, shared.QuicConfiguration.GatewayAPIPort, API_ECHO_PATH)
+func RequestEcho(address string, port int) *EchoResponse {
+	addr := fmt.Sprintf("http://%s:%d/%s", address, port, API_ECHO_PATH)
+
+	http.DefaultClient.Timeout = 500 * time.Millisecond
 
 	resp, err := http.DefaultClient.Get(addr)
 	if err != nil {

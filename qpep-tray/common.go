@@ -9,9 +9,16 @@ import (
 	"time"
 
 	"github.com/getlantern/systray"
+	"github.com/parvit/qpep/api"
 	"github.com/parvit/qpep/qpep-tray/icons"
 
 	. "github.com/sqweek/dialog"
+)
+
+const (
+	TooltipMsgDisconnected = "QPep TCP accelerator - Status: Disconnected"
+	TooltipMsgConnecting   = "QPep TCP accelerator - Status: Connecting"
+	TooltipMsgConnected    = "QPep TCP accelerator - Status: Connected"
 )
 
 var (
@@ -36,69 +43,43 @@ func ConfirmMsg(message string, parameters ...interface{}) bool {
 	return Message(str).YesNo()
 }
 
-var contextWatchdog context.Context
-var cancelWatchdog context.CancelFunc
+var contextConfigWatchdog context.Context
+var cancelConfigWatchdog context.CancelFunc
+
+var contextConnectionWatchdog context.Context
+var cancelConnectionWatchdog context.CancelFunc
 
 func onReady() {
-	contextWatchdog, cancelWatchdog = startReloadConfigurationWatchdog()
-
+	// Setup tray menu
 	systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
-	systray.SetTitle("QPep")
-	systray.SetTooltip("TCP Accelerator")
+	systray.SetTitle("QPep TCP accelerator")
+	systray.SetTooltip("QPep TCP accelerator")
 
-	// We can manipulate the systray in other goroutines
+	mConfig := systray.AddMenuItem("Edit Configuration", "Open configuration for next client / server executions")
+	mConfigRefresh := systray.AddMenuItem("Reload Configuration", "Reload configuration from disk and restart the service")
+	systray.AddSeparator()
+	mClient := systray.AddMenuItemCheckbox("Client Disabled", "Launch/Stop QPep Client", false)
+	mServer := systray.AddMenuItemCheckbox("Server Disabled", "Launch/Stop QPep Server", false)
+	systray.AddSeparator()
+	mQuit := systray.AddMenuItem("Quit", "Stop all and quit the whole app")
+
+	// Sets the icon of the menu items
+	mQuit.SetIcon(icons.ExitIconData)
+	mConfig.SetIcon(icons.ConfigIconData)
+	mConfigRefresh.SetIcon(icons.RefreshIconData)
+
+	// launch the watchdog routines
+	contextConfigWatchdog, cancelConfigWatchdog = startReloadConfigurationWatchdog()
+	contextConnectionWatchdog, cancelConnectionWatchdog = startConnectionStatusWatchdog()
+
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Printf("PANIC: %v", err)
 				debug.PrintStack()
-				cancelWatchdog()
+				cancelConfigWatchdog()
 			}
 		}()
-
-		systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
-		systray.SetTitle("QPep TCP accelerator")
-		systray.SetTooltip("QPep TCP accelerator")
-
-		go func() {
-			defer func() {
-				_ = recover()
-			}()
-
-			i := 0
-			for {
-				select {
-				case <-time.After(1 * time.Second):
-					i++
-					if i > 15 {
-						systray.SetTooltip("QPep TCP accelerator - Status: Connected")
-						systray.SetTemplateIcon(icons.MainIconConnected, icons.MainIconConnected)
-					} else if i%2 == 0 {
-						systray.SetTooltip("QPep TCP accelerator - Status: Connecting...")
-						systray.SetTemplateIcon(icons.MainIconWaiting, icons.MainIconWaiting)
-					} else {
-						systray.SetTooltip("QPep TCP accelerator - Status: Disconnected")
-						systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
-					}
-					continue
-				case <-contextWatchdog.Done():
-					return
-				}
-			}
-		}()
-
-		mConfig := systray.AddMenuItem("Edit Configuration", "Open configuration for next client / server executions")
-		mConfigRefresh := systray.AddMenuItem("Reload Configuration", "Reload configuration from disk and restart the service")
-		systray.AddSeparator()
-		mClient := systray.AddMenuItemCheckbox("Client Disabled", "Launch/Stop QPep Client", false)
-		mServer := systray.AddMenuItemCheckbox("Server Disabled", "Launch/Stop QPep Server", false)
-		systray.AddSeparator()
-		mQuit := systray.AddMenuItem("Quit", "Stop all and quit the whole app")
-
-		// Sets the icon of a menu item.
-		mQuit.SetIcon(icons.ExitIconData)
-		mConfig.SetIcon(icons.ConfigIconData)
-		mConfigRefresh.SetIcon(icons.RefreshIconData)
 
 		mClientActive := false
 		mServerActive := false
@@ -200,13 +181,90 @@ func onReady() {
 func onExit() {
 	log.Println("Waiting for resources to be freed...")
 
-	cancelWatchdog()
+	// request cancelling of the watchdogs
+	cancelConfigWatchdog()
+	cancelConnectionWatchdog()
+
 	select {
 	case <-time.After(10 * time.Second):
 		break
-	case <-contextWatchdog.Done():
+	case <-contextConfigWatchdog.Done():
+		break
+	}
+
+	select {
+	case <-time.After(10 * time.Second):
+		break
+	case <-contextConnectionWatchdog.Done():
 		break
 	}
 
 	log.Println("Closing...")
+}
+
+func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	const (
+		stateDisconnected = 0
+		stateConnecting   = 1
+		stateConnected    = 2
+	)
+
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("ERROR: %v\n", err)
+			}
+		}()
+
+		var state = stateDisconnected
+		//var pubAddress = ""
+		var flip = 0
+		var animIcons = [][]byte{
+			icons.MainIconWaiting,
+			icons.MainIconData,
+		}
+
+	CHECKLOOP:
+		for {
+			select {
+			case <-ctx.Done():
+				log.Println("Stopping connection check watchdog")
+				break CHECKLOOP
+
+			case <-time.After(1 * time.Second):
+				log.Printf("state: %d\n", state)
+				if clientCmd == nil && serverCmd == nil {
+					state = stateDisconnected
+					//pubAddress = ""
+					systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
+					continue
+				}
+				if state == stateDisconnected {
+					state = stateConnecting
+					flip = 0
+				}
+
+				if state != stateConnected {
+					var resp = api.RequestEcho(qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort)
+					if resp == nil {
+						log.Printf("Server Echo: nil\n")
+						systray.SetTemplateIcon(animIcons[flip], animIcons[flip])
+						flip = (flip + 1) % 2
+						continue
+					}
+
+					//pubAddress = resp.Address
+					log.Printf("Server Echo: %v\n", resp.Address, resp.Port)
+					state = stateConnected
+				}
+
+				systray.SetTemplateIcon(icons.MainIconWaiting, icons.MainIconWaiting)
+				continue
+			}
+		}
+	}()
+
+	return ctx, cancel
 }

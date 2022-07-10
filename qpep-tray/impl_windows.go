@@ -27,7 +27,6 @@ func getClientCommand() *exec.Cmd {
 			"--minBeforeDecimation %d "+
 			"--gateway \"%s\" "+
 			"--port %d "+
-			"--apiport %d "+
 			"--listenaddress \"%s\" "+
 			"--listenport %d "+
 			"--multistream %v "+
@@ -41,7 +40,6 @@ func getClientCommand() *exec.Cmd {
 			qpepConfig.DelayDecimate,
 			qpepConfig.GatewayHost,
 			qpepConfig.GatewayPort,
-			qpepConfig.GatewayAPIPort,
 			qpepConfig.ListenHost,
 			qpepConfig.ListenPort,
 			qpepConfig.MultiStream,
@@ -77,6 +75,7 @@ func getServerCommand() *exec.Cmd {
 			"--minBeforeDecimation %d "+
 			"--gateway \"%s\" "+
 			"--port %d "+
+			"--apiport %d "+
 			"--multistream %v "+
 			"--verbose %v "+
 			"--varAckDelay %d "+
@@ -88,6 +87,7 @@ func getServerCommand() *exec.Cmd {
 			qpepConfig.DelayDecimate,
 			qpepConfig.GatewayHost,
 			qpepConfig.GatewayPort,
+			qpepConfig.GatewayAPIPort,
 			qpepConfig.MultiStream,
 			qpepConfig.Verbose,
 			qpepConfig.VarAckDelay,

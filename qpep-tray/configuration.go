@@ -11,7 +11,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/parvit/qpep/api"
 	"github.com/skratchdot/open-golang/open"
 	"gopkg.in/yaml.v3"
 )
@@ -26,7 +25,7 @@ decimate: 4
 minBeforeDecimation: 100
 gateway: 198.18.0.254
 port: 443
-gatewayAPIPort: 444
+apiport: 444
 listenaddress: 192.168.1.10
 listenport: 9443
 multistream: true
@@ -44,7 +43,7 @@ type QPepConfigYAML struct {
 	DelayDecimate    int    `yaml:"minBeforeDecimation"`
 	GatewayHost      string `yaml:"gateway"`
 	GatewayPort      int    `yaml:"port"`
-	GatewayAPIPort   int    `yaml:"gatewayAPIPort"`
+	GatewayAPIPort   int    `yaml:"apiport"`
 	ListenHost       string `yaml:"listenaddress"`
 	ListenPort       int    `yaml:"listenport"`
 	MultiStream      bool   `yaml:"multistream"`
@@ -130,13 +129,6 @@ func startReloadConfigurationWatchdog() (context.Context, context.CancelFunc) {
 
 	CHECKLOOP:
 		for {
-			var resp = api.RequestEcho()
-			if resp != nil {
-				log.Printf("Server Response: %v\n", resp.Address, resp.Port)
-			} else {
-				log.Printf("Server Response: nil\n")
-			}
-
 			select {
 			case <-ctx.Done():
 				log.Println("Stopping configfile watchdog")
