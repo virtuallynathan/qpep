@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/parvit/qpep/shared"
 	"github.com/skratchdot/open-golang/open"
 	"gopkg.in/yaml.v3"
 )
@@ -92,6 +93,8 @@ func readConfiguration() (outerr error) {
 		ErrorMsg("Could not decode configuration file: %v", err)
 		return err
 	}
+
+	shared.QuicConfiguration.Verbose = qpepConfig.Verbose
 
 	log.Println("Configuration Loaded")
 	return nil

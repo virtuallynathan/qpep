@@ -1,7 +1,9 @@
 package shared
 
 import (
+	"encoding/json"
 	"flag"
+	"log"
 	"os"
 )
 
@@ -31,7 +33,7 @@ var (
 	QuicConfiguration QuicConfig
 )
 
-func init() {
+func ParseFlags() {
 	ackElicitingFlag := flag.Int("acks", 10, "Number of acks to bundle")
 	ackDecimationFlag := flag.Int("decimate", 4, "Denominator of Ack Decimation Ratio")
 	congestionWindowFlag := flag.Int("congestion", 4, "Number of QUIC packets for initial congestion window")
@@ -71,4 +73,7 @@ func init() {
 		WinDivertThreads:               *winDiverterThreads,
 		Verbose:                        *verbose,
 	}
+
+	data, _ := json.MarshalIndent(QuicConfiguration, "", " ")
+	log.Printf("%v\n", string(data))
 }

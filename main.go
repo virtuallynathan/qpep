@@ -27,6 +27,8 @@ func main() {
 
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 
+	shared.ParseFlags()
+
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
 	if shared.QuicConfiguration.ClientFlag {
@@ -54,7 +56,8 @@ func main() {
 
 func runAsClient(execContext context.Context) {
 	log.Println("Running Client")
-	windivert.EnableDiverterLogging(client.ClientConfiguration.Verbose)
+
+	windivert.EnableDiverterLogging(shared.QuicConfiguration.Verbose)
 
 	gatewayHost := shared.QuicConfiguration.GatewayIP
 	gatewayPort := shared.QuicConfiguration.GatewayPort

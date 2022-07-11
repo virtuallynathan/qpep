@@ -219,7 +219,7 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 		}()
 
 		var state = stateDisconnected
-		//var pubAddress = ""
+		var pubAddress = ""
 		var flip = 0
 		var animIcons = [][]byte{
 			icons.MainIconWaiting,
@@ -237,7 +237,7 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 				log.Printf("state: %d\n", state)
 				if clientCmd == nil && serverCmd == nil {
 					state = stateDisconnected
-					//pubAddress = ""
+					pubAddress = ""
 					systray.SetTemplateIcon(icons.MainIconData, icons.MainIconData)
 					continue
 				}
@@ -255,12 +255,29 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 						continue
 					}
 
-					//pubAddress = resp.Address
-					log.Printf("Server Echo: %v\n", resp.Address, resp.Port)
-					state = stateConnected
+					log.Printf("Server Echo: %s %d\n", resp.Address, resp.Port)
+					pubAddress = resp.Address
 				}
 
-				systray.SetTemplateIcon(icons.MainIconWaiting, icons.MainIconWaiting)
+				if len(pubAddress) > 0 {
+					var status = api.RequestStatus(qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, pubAddress)
+					if status == nil {
+						log.Printf("Server Status: no / invalid response\n")
+					} else if status.ConnectionCounter < 0 {
+						log.Printf("Server Status: no connections received\n")
+					}
+					if status == nil || status.ConnectionCounter < 0 {
+						pubAddress = ""
+						state = stateConnecting
+						systray.SetTemplateIcon(animIcons[flip], animIcons[flip])
+						flip = (flip + 1) % 2
+						continue
+					}
+
+					log.Printf("Server Status: %s %d\n", status.LastCheck, status.ConnectionCounter)
+					state = stateConnected
+					systray.SetTemplateIcon(icons.MainIconConnected, icons.MainIconConnected)
+				}
 				continue
 			}
 		}

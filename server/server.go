@@ -25,7 +25,7 @@ import (
 
 var (
 	ServerConfiguration = ServerConfig{
-		ListenHost: "0.0.0.0",
+		ListenHost: "127.0.0.1",
 		ListenPort: 443,
 		APIPort:    444,
 	}
@@ -51,6 +51,8 @@ func RunServer(ctx context.Context) {
 	}()
 
 	// update configuration from flags
+	ServerConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
+	ServerConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
 	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
 
 	listenAddr := ServerConfiguration.ListenHost + ":" + strconv.Itoa(ServerConfiguration.ListenPort)

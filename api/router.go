@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/parvit/qpep/shared"
@@ -17,7 +17,11 @@ const (
 )
 
 func RunAPIServer(ctx context.Context) {
-	listenAddr := shared.QuicConfiguration.ListenIP + ":" + strconv.Itoa(shared.QuicConfiguration.GatewayAPIPort)
+	// update configuration from flags
+	host := shared.QuicConfiguration.ListenIP
+	apiPort := shared.QuicConfiguration.GatewayAPIPort
+
+	listenAddr := fmt.Sprintf("%s:%d", host, apiPort)
 	log.Printf("Opening API Server on: %s", listenAddr)
 
 	rtr := NewRouter()

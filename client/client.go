@@ -61,14 +61,18 @@ func RunClient(ctx context.Context) {
 	// update configuration from flags
 	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
+	ClientConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
 	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
+	ClientConfiguration.MultiStream = shared.QuicConfiguration.MultiStream
 	ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
 	ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
 
 	log.Printf("Binding to TCP %s:%d", ClientConfiguration.ListenHost, ClientConfiguration.ListenPort)
 	var err error
-	proxyListener, err = NewClientProxyListener("tcp", &net.TCPAddr{IP: net.ParseIP(ClientConfiguration.ListenHost),
-		Port: ClientConfiguration.ListenPort})
+	proxyListener, err = NewClientProxyListener("tcp", &net.TCPAddr{
+		IP:   net.ParseIP(ClientConfiguration.ListenHost),
+		Port: ClientConfiguration.ListenPort,
+	})
 	if err != nil {
 		log.Printf("Encountered error when binding client proxy listener: %s", err)
 		return
@@ -222,6 +226,7 @@ func openQuicSession() (quic.Session, error) {
 	tlsConf := &tls.Config{InsecureSkipVerify: true, NextProtos: []string{"qpep"}}
 	gatewayPath := ClientConfiguration.GatewayHost + ":" + strconv.Itoa(ClientConfiguration.GatewayPort)
 	quicClientConfig := QuicClientConfiguration
+	log.Printf("Dialing QUIC Session: %s\n", gatewayPath)
 	for i := 0; i < ClientConfiguration.ConnectionRetries; i++ {
 		session, err = quic.DialAddr(gatewayPath, tlsConf, &quicClientConfig)
 		if err == nil {
