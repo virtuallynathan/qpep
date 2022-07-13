@@ -25,7 +25,7 @@ import (
 
 var (
 	ServerConfiguration = ServerConfig{
-		ListenHost: "127.0.0.1",
+		ListenHost: "0.0.0.0",
 		ListenPort: 443,
 		APIPort:    444,
 	}
