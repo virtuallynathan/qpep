@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"strconv"
@@ -46,12 +47,32 @@ func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	dataAddr := strings.Split(r.RemoteAddr, ":")
-	port, _ := strconv.ParseInt(dataAddr[1], 10, 64)
+	mappedAddr := server.Statistics.GetMappedAddress(r.RemoteAddr)
+	log.Printf("remote: %s / mapped: %s\n", r.RemoteAddr, mappedAddr)
+	if len(mappedAddr) == 0 {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	dataAddr := strings.Split(mappedAddr, ":")
+	port := int64(0)
+
+	switch len(dataAddr) {
+	default:
+		fallthrough
+	case 0:
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	case 1:
+		break
+	case 2:
+		port, _ = strconv.ParseInt(dataAddr[1], 10, 64)
+		break
+	}
 
 	data, err := json.Marshal(EchoResponse{
 		Address: dataAddr[0],
-		Port:    int(port),
+		Port:    port,
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -172,6 +172,10 @@ func handleTCPConn(tcpConn net.Conn) {
 	if diverted == windivert.DIVERT_OK {
 		log.Printf("Diverted connection: %v:%v %v:%v", srcAddress, srcPort, dstAddress, dstPort)
 
+		sessionHeader.SourceAddr = &net.TCPAddr{
+			IP:   net.ParseIP(srcAddress),
+			Port: srcPort,
+		}
 		sessionHeader.DestAddr = &net.TCPAddr{
 			IP:   net.ParseIP(dstAddress),
 			Port: dstPort,

@@ -27,7 +27,7 @@ func startServer() error {
 
 func stopServer() error {
 	if serverCmd == nil {
-		log.Println("ERROR: Cannot stop an already server client, first start it")
+		log.Println("ERROR: Cannot stop an already stopped server, first start it")
 		return nil
 	}
 

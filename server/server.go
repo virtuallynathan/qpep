@@ -92,7 +92,6 @@ func ListenQuicSession() {
 			log.Printf("Unrecoverable error while accepting QUIC session: %s", err)
 			return
 		}
-		Statistics.Increment(TOTAL_CONNECTIONS)
 		go ListenQuicConn(quicSession)
 	}
 }
@@ -103,7 +102,6 @@ func ListenQuicConn(quicSession quic.Session) {
 			log.Printf("PANIC: %v", err)
 			debug.PrintStack()
 		}
-		Statistics.Decrement(TOTAL_CONNECTIONS)
 	}()
 	for {
 		stream, err := quicSession.AcceptStream(context.Background())
@@ -135,29 +133,48 @@ func HandleQuicStream(stream quic.Stream) {
 }
 
 func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
-	remoteConnIP := fmt.Sprintf(QUIC_CONN, qpepHeader.SourceAddr.IP)
-
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("PANIC: %v", err)
 			debug.PrintStack()
 		}
-		Statistics.Decrement(remoteConnIP)
 	}()
 
-	Statistics.Increment(remoteConnIP)
+	timeOut := time.Duration(10) * time.Second
 
-	log.Printf("Opening TCP Connection to %s\n", qpepHeader.DestAddr.String())
-	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), time.Duration(10)*time.Second)
+	log.Printf("Opening TCP Connection to %s, from %s\n", qpepHeader.DestAddr, qpepHeader.SourceAddr)
+	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), timeOut)
 	if err != nil {
 		log.Printf("Unable to open TCP connection from QPEP stream: %s", err)
 		return
 	}
-	log.Printf("Opened TCP Conn %s -> %s\n", qpepHeader.SourceAddr.String(), qpepHeader.DestAddr.String())
+	log.Printf("Opened TCP Conn %s -> %s\n", qpepHeader.SourceAddr, qpepHeader.DestAddr)
+
+	trackedAddress := qpepHeader.SourceAddr.IP.String()
+	trackedAddressKey := fmt.Sprintf(QUIC_CONN, qpepHeader.SourceAddr.IP.String())
+	proxyAddress := tcpConn.(*net.TCPConn).LocalAddr().String()
+
+	Statistics.Increment(TOTAL_CONNECTIONS)
+	Statistics.Increment(trackedAddressKey)
+	defer func() {
+		Statistics.Decrement(trackedAddressKey)
+		Statistics.Decrement(TOTAL_CONNECTIONS)
+	}()
+
+	tcpConn.SetReadDeadline(time.Now().Add(timeOut))
+	tcpConn.SetWriteDeadline(time.Now().Add(timeOut))
 
 	var streamWait sync.WaitGroup
 	streamWait.Add(2)
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
+		defer func() {
+			Statistics.DeleteMappedAddress(proxyAddress)
+			streamWait.Done()
+		}()
+
+		Statistics.SetMappedAddress(proxyAddress, trackedAddress)
+		log.Printf("map: %s <=> %s\n", proxyAddress, trackedAddress)
+
 		_, err = io.Copy(dst, src)
 		err1 := dst.SetLinger(3)
 		if err1 != nil {
@@ -167,9 +184,10 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 		if err != nil {
 			log.Printf("Error on Copy %s", err)
 		}
-		streamWait.Done()
 	}
 	streamTCPtoQUIC := func(dst quic.Stream, src *net.TCPConn) {
+		defer streamWait.Done()
+
 		_, err = io.Copy(dst, src)
 		log.Printf("Finished Copying TCP Conn %s->%s", src.LocalAddr().String(), src.RemoteAddr().String())
 		err1 := src.SetLinger(3)
@@ -180,7 +198,6 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 		if err != nil {
 			log.Printf("Error on Copy %s", err)
 		}
-		streamWait.Done()
 	}
 
 	go streamQUICtoTCP(tcpConn.(*net.TCPConn), stream)

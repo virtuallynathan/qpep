@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/parvit/qpep/server"
 	"github.com/parvit/qpep/shared"
 )
 
@@ -41,6 +42,11 @@ func NewServer(addr string, rtr *APIRouter, ctx context.Context) *http.Server {
 			return ctx
 		},
 	}
+}
+
+func serverConnectionHandler(conn net.Conn, state http.ConnState) {
+	addr := conn.RemoteAddr().String()
+	log.Printf("Remote addr: %s / mapped: %s\n", addr, server.Statistics.GetMappedAddress(addr))
 }
 
 func NewRouter() *APIRouter {

@@ -8,7 +8,7 @@ type APIRouter struct {
 
 type EchoResponse struct {
 	Address string `json:"Address"`
-	Port    int    `json:"Port"`
+	Port    int64  `json:"Port"`
 }
 
 type StatusReponse struct {
