@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/parvit/qpep/api"
 	"github.com/parvit/qpep/shared"
 	"github.com/parvit/qpep/windivert"
 	"golang.org/x/net/context"
@@ -38,6 +39,7 @@ type ClientConfig struct {
 	ListenPort        int
 	GatewayHost       string
 	GatewayPort       int
+	APIPort           int
 	QuicStreamTimeout int
 	MultiStream       bool
 	IdleTimeout       time.Duration
@@ -61,6 +63,7 @@ func RunClient(ctx context.Context) {
 	// update configuration from flags
 	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
+	ClientConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
 	ClientConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
 	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
 	ClientConfiguration.MultiStream = shared.QuicConfiguration.MultiStream
@@ -85,7 +88,8 @@ func RunClient(ctx context.Context) {
 		case <-ctx.Done():
 			proxyListener.Close()
 			return
-		case <-time.After(10 * time.Millisecond):
+		case <-time.After(1 * time.Second):
+			apiStatusCheck()
 			continue
 		}
 	}
@@ -242,4 +246,15 @@ func openQuicSession() (quic.Session, error) {
 
 	log.Printf("Max Retries Exceeded. Unable to Open QUIC Session: %s\n", err)
 	return nil, err
+}
+
+func apiStatusCheck() {
+	localAddr := ClientConfiguration.ListenHost
+	apiAddr := ClientConfiguration.GatewayHost
+	apiPort := ClientConfiguration.APIPort
+	if response := api.RequestEcho(localAddr, apiAddr, apiPort); response != nil {
+		log.Printf("Gateway Echo OK\n")
+		return
+	}
+	log.Printf("Gateway Echo FAILED\n")
 }

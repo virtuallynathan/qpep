@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/parvit/qpep/api"
 	"github.com/parvit/qpep/client"
 	"github.com/parvit/qpep/shared"
 
@@ -151,14 +152,14 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	log.Printf("Opened TCP Conn %s -> %s\n", qpepHeader.SourceAddr, qpepHeader.DestAddr)
 
 	trackedAddress := qpepHeader.SourceAddr.IP.String()
-	trackedAddressKey := fmt.Sprintf(QUIC_CONN, qpepHeader.SourceAddr.IP.String())
+	trackedAddressKey := fmt.Sprintf(api.QUIC_CONN, qpepHeader.SourceAddr.IP.String())
 	proxyAddress := tcpConn.(*net.TCPConn).LocalAddr().String()
 
-	Statistics.Increment(TOTAL_CONNECTIONS)
-	Statistics.Increment(trackedAddressKey)
+	api.Statistics.Increment(api.TOTAL_CONNECTIONS)
+	api.Statistics.Increment(trackedAddressKey)
 	defer func() {
-		Statistics.Decrement(trackedAddressKey)
-		Statistics.Decrement(TOTAL_CONNECTIONS)
+		api.Statistics.Decrement(trackedAddressKey)
+		api.Statistics.Decrement(api.TOTAL_CONNECTIONS)
 	}()
 
 	tcpConn.SetReadDeadline(time.Now().Add(timeOut))
@@ -168,11 +169,11 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	streamWait.Add(2)
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
 		defer func() {
-			Statistics.DeleteMappedAddress(proxyAddress)
+			api.Statistics.DeleteMappedAddress(proxyAddress)
 			streamWait.Done()
 		}()
 
-		Statistics.SetMappedAddress(proxyAddress, trackedAddress)
+		api.Statistics.SetMappedAddress(proxyAddress, trackedAddress)
 
 		_, err = io.Copy(dst, src)
 		err1 := dst.SetLinger(3)

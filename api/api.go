@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/parvit/qpep/server"
 	"github.com/parvit/qpep/shared"
 )
 
@@ -29,8 +28,8 @@ func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	addr := ps.ByName("addr")
 
 	if len(addr) > 0 {
-		key := fmt.Sprintf(server.QUIC_CONN, addr)
-		counter = server.Statistics.Get(key)
+		key := fmt.Sprintf(QUIC_CONN, addr)
+		counter = Statistics.Get(key)
 	}
 
 	data, err := json.Marshal(StatusReponse{
@@ -47,7 +46,7 @@ func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	mappedAddr := server.Statistics.GetMappedAddress(r.RemoteAddr)
+	mappedAddr := Statistics.GetMappedAddress(r.RemoteAddr)
 	log.Printf("remote: %s / mapped: %s\n", r.RemoteAddr, mappedAddr)
 	if len(mappedAddr) == 0 {
 		w.WriteHeader(http.StatusUnauthorized)
