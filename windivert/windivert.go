@@ -15,21 +15,21 @@ const (
 )
 
 func InitializeWinDivertEngine(gatewayAddr, listenAddr string, gatewayPort, listenPort, numThreads int) int {
-	log.Println("Fake")
+	log.Println("WARNING: windivert package compiled without CGO") // message to check for failing CGO
 	return DIVERT_OK
 }
 
 func CloseWinDivertEngine() int {
-	log.Println("Fake")
+	log.Println("WARNING: windivert package compiled without CGO") // message to check for failing CGO
 	return DIVERT_OK
 }
 
 func GetConnectionStateData(port int) (int, int, int, string, string) {
-	log.Println("Fake")
+	log.Println("WARNING: windivert package compiled without CGO") // message to check for failing CGO
 	return DIVERT_OK, -1, -1, "", ""
 }
 
 func EnableDiverterLogging(enable bool) {
-	log.Println("Fake")
+	log.Println("WARNING: windivert package compiled without CGO") // message to check for failing CGO
 	return
 }

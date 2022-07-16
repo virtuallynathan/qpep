@@ -173,7 +173,6 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 		}()
 
 		Statistics.SetMappedAddress(proxyAddress, trackedAddress)
-		log.Printf("map: %s <=> %s\n", proxyAddress, trackedAddress)
 
 		_, err = io.Copy(dst, src)
 		err1 := dst.SetLinger(3)
