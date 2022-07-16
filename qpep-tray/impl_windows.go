@@ -14,30 +14,40 @@ const (
 )
 
 func getClientCommand() *exec.Cmd {
-	exeFile := filepath.Join(ExeDir, EXENAME)
+	exeFile, _ := filepath.Abs(filepath.Join(ExeDir, EXENAME))
 	//handle, _ := syscall.GetCurrentProcess()
+
+	var verboseFlag = ""
+	if qpepConfig.Verbose {
+		verboseFlag = "-verbose"
+	}
 
 	attr := &syscall.SysProcAttr{
 		HideWindow: true,
 		CmdLine: fmt.Sprintf(
-			"-client "+
-				"-verbose %v "+
-				"-threads %d "+
-				"-gateway \"%s\" "+
-				"-port %d "+
-				"-apiport %d "+
-				"-acks %d "+
-				"-ackDelay %d "+
-				"-congestion %d "+
-				"-decimate %d "+
-				"-minBeforeDecimation %d "+
-				"-multistream %v "+
-				"-varAckDelay %d ",
-			qpepConfig.Verbose,
+			exeFile+` `+
+				`-client `+
+				`%s `+
+				`-threads %d `+
+				`-gateway "%s" `+
+				`-port %d `+
+				`-apiport %d `+
+				`-listenaddress "%s" `+
+				`-listenport %d `+
+				`-acks %d `+
+				`-ackDelay %d `+
+				`-congestion %d `+
+				`-decimate %d `+
+				`-minBeforeDecimation %d `+
+				`-multistream %v `+
+				`-varAckDelay %d `,
+			verboseFlag,
 			qpepConfig.WinDivertThreads,
 			qpepConfig.GatewayHost,
 			qpepConfig.GatewayPort,
 			qpepConfig.GatewayAPIPort,
+			qpepConfig.ListenHost,
+			qpepConfig.ListenPort,
 			qpepConfig.Acks,
 			qpepConfig.AckDelay,
 			qpepConfig.Congestion,
@@ -65,25 +75,36 @@ func getServerCommand() *exec.Cmd {
 	exeFile := filepath.Join(ExeDir, EXENAME)
 	//handle, _ := syscall.GetCurrentProcess()
 
+	var verboseFlag = ""
+	if qpepConfig.Verbose {
+		verboseFlag = "-verbose"
+	}
+
 	attr := &syscall.SysProcAttr{
 		HideWindow: true,
-		CmdLine: fmt.Sprintf("-verbose %v "+
-			"-threads %d "+
-			"-gateway \"%s\" "+
-			"-port %d "+
-			"-apiport %d "+
-			"-acks %d "+
-			"-ackDelay %d "+
-			"-congestion %d "+
-			"-decimate %d "+
-			"-minBeforeDecimation %d "+
-			"-multistream %v "+
-			"-varAckDelay %d ",
-			qpepConfig.Verbose,
+		CmdLine: fmt.Sprintf(
+			exeFile+` `+
+				`%s `+
+				`-threads %d `+
+				`-gateway "%s" `+
+				`-port %d `+
+				`-apiport %d `+
+				`-listenaddress "%s" `+
+				`-listenport %d `+
+				`-acks %d `+
+				`-ackDelay %d `+
+				`-congestion %d `+
+				`-decimate %d `+
+				`-minBeforeDecimation %d `+
+				`-multistream %v `+
+				`-varAckDelay %d `,
+			verboseFlag,
 			qpepConfig.WinDivertThreads,
 			qpepConfig.GatewayHost,
 			qpepConfig.GatewayPort,
 			qpepConfig.GatewayAPIPort,
+			qpepConfig.ListenHost,
+			qpepConfig.ListenPort,
 			qpepConfig.Acks,
 			qpepConfig.AckDelay,
 			qpepConfig.Congestion,

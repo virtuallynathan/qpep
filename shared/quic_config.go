@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strings"
 )
 
 type QuicConfig struct {
@@ -33,7 +34,9 @@ var (
 	QuicConfiguration QuicConfig
 )
 
-func ParseFlags() {
+func ParseFlags(args []string) {
+	log.Println("ARGS:", strings.Join(args, " "))
+
 	ackElicitingFlag := flag.Int("acks", 10, "Number of acks to bundle")
 	ackDecimationFlag := flag.Int("decimate", 4, "Denominator of Ack Decimation Ratio")
 	congestionWindowFlag := flag.Int("congestion", 4, "Number of QUIC packets for initial congestion window")
@@ -50,7 +53,7 @@ func ParseFlags() {
 	winDiverterThreads := flag.Int("threads", 1, "Worker threads for windivert engine (min 1, max 8)")
 	verbose := flag.Bool("verbose", false, "Outputs data about diverted connections for debug")
 
-	flag.Parse()
+	flag.CommandLine.Parse(args[1:])
 	if !flag.Parsed() {
 		flag.Usage()
 		os.Exit(1)

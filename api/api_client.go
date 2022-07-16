@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -13,12 +14,32 @@ import (
 	"github.com/parvit/qpep/shared"
 )
 
-func RequestEcho(address string, port int) *EchoResponse {
+func getClientForAPI(localAddr net.Addr) *http.Client {
+	return &http.Client{
+		Timeout: 500 * time.Millisecond,
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				LocalAddr: localAddr,
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:    1,
+			IdleConnTimeout: 10 * time.Second,
+			//TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+}
+
+func RequestEcho(localAddress, address string, port int) *EchoResponse {
 	addr := fmt.Sprintf("http://%s:%d%s", address, port, API_ECHO_PATH)
 
-	client := &http.Client{
-		Timeout: 500 * time.Millisecond,
-	}
+	log.Printf("local: %s - %s\n", localAddress, net.ParseIP(localAddress))
+	client := getClientForAPI(&net.TCPAddr{
+		IP: net.ParseIP(localAddress),
+	})
 
 	resp, err := client.Get(addr)
 	if err != nil {
@@ -59,13 +80,13 @@ func RequestEcho(address string, port int) *EchoResponse {
 	return respData
 }
 
-func RequestStatus(gatewayAddress string, apiPort int, address string) *StatusReponse {
-	apiPath := strings.Replace(API_STATUS_PATH, ":addr", address, -1)
+func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddress string) *StatusReponse {
+	apiPath := strings.Replace(API_STATUS_PATH, ":addr", publicAddress, -1)
 	addr := fmt.Sprintf("http://%s:%d%s", gatewayAddress, apiPort, apiPath)
 
-	client := &http.Client{
-		Timeout: 500 * time.Millisecond,
-	}
+	client := getClientForAPI(&net.TCPAddr{
+		IP: net.ParseIP(localAddress),
+	})
 
 	resp, err := client.Get(addr)
 	if err != nil {

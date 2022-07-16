@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -25,9 +26,17 @@ func main() {
 		}
 	}()
 
+	f, err := os.OpenFile("qpep.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	wrt := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(wrt)
+
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 
-	shared.ParseFlags()
+	shared.ParseFlags(os.Args) // don't skip first parameter
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 

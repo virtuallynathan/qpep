@@ -234,7 +234,6 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 				break CHECKLOOP
 
 			case <-time.After(1 * time.Second):
-				log.Printf("state: %d\n", state)
 				if clientCmd == nil && serverCmd == nil {
 					state = stateDisconnected
 					pubAddress = ""
@@ -247,9 +246,8 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 				}
 
 				if state != stateConnected {
-					var resp = api.RequestEcho(qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort)
+					var resp = api.RequestEcho(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort)
 					if resp == nil {
-						log.Printf("Server Echo: nil\n")
 						systray.SetTemplateIcon(animIcons[flip], animIcons[flip])
 						flip = (flip + 1) % 2
 						continue
@@ -260,7 +258,7 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 				}
 
 				if len(pubAddress) > 0 {
-					var status = api.RequestStatus(qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, pubAddress)
+					var status = api.RequestStatus(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, pubAddress)
 					if status == nil {
 						log.Printf("Server Status: no / invalid response\n")
 					} else if status.ConnectionCounter < 0 {
