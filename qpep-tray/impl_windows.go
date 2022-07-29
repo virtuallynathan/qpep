@@ -14,38 +14,47 @@ const (
 )
 
 func getClientCommand() *exec.Cmd {
-	exeFile := filepath.Join(ExeDir, EXENAME)
+	exeFile, _ := filepath.Abs(filepath.Join(ExeDir, EXENAME))
 	//handle, _ := syscall.GetCurrentProcess()
+
+	var verboseFlag = ""
+	if qpepConfig.Verbose {
+		verboseFlag = "-verbose"
+	}
 
 	attr := &syscall.SysProcAttr{
 		HideWindow: true,
-		CmdLine: fmt.Sprintf("--client "+
-			"--acks %d "+
-			"--ackDelay %d "+
-			"--congestion %d "+
-			"--decimate %d "+
-			"--minBeforeDecimation %d "+
-			"--gateway \"%s\" "+
-			"--port %d "+
-			"--listenaddress \"%s\" "+
-			"--listenport %d "+
-			"--multistream %v "+
-			"--verbose %v "+
-			"--varAckDelay %d "+
-			"--threads %d ",
+		CmdLine: fmt.Sprintf(
+			exeFile+` `+
+				`-client `+
+				`%s `+
+				`-threads %d `+
+				`-gateway "%s" `+
+				`-port %d `+
+				`-apiport %d `+
+				`-listenaddress "%s" `+
+				`-listenport %d `+
+				`-acks %d `+
+				`-ackDelay %d `+
+				`-congestion %d `+
+				`-decimate %d `+
+				`-minBeforeDecimation %d `+
+				`-multistream %v `+
+				`-varAckDelay %d `,
+			verboseFlag,
+			qpepConfig.WinDivertThreads,
+			qpepConfig.GatewayHost,
+			qpepConfig.GatewayPort,
+			qpepConfig.GatewayAPIPort,
+			qpepConfig.ListenHost,
+			qpepConfig.ListenPort,
 			qpepConfig.Acks,
 			qpepConfig.AckDelay,
 			qpepConfig.Congestion,
 			qpepConfig.Decimate,
 			qpepConfig.DelayDecimate,
-			qpepConfig.GatewayHost,
-			qpepConfig.GatewayPort,
-			qpepConfig.ListenHost,
-			qpepConfig.ListenPort,
 			qpepConfig.MultiStream,
-			qpepConfig.Verbose,
-			qpepConfig.VarAckDelay,
-			qpepConfig.WinDivertThreads),
+			qpepConfig.VarAckDelay),
 	}
 
 	cmd := exec.Command(exeFile)
@@ -66,30 +75,43 @@ func getServerCommand() *exec.Cmd {
 	exeFile := filepath.Join(ExeDir, EXENAME)
 	//handle, _ := syscall.GetCurrentProcess()
 
+	var verboseFlag = ""
+	if qpepConfig.Verbose {
+		verboseFlag = "-verbose"
+	}
+
 	attr := &syscall.SysProcAttr{
 		HideWindow: true,
-		CmdLine: fmt.Sprintf("--acks %d "+
-			"--ackDelay %d "+
-			"--congestion %d "+
-			"--decimate %d "+
-			"--minBeforeDecimation %d "+
-			"--gateway \"%s\" "+
-			"--port %d "+
-			"--multistream %v "+
-			"--verbose %v "+
-			"--varAckDelay %d "+
-			"--threads %d ",
+		CmdLine: fmt.Sprintf(
+			exeFile+` `+
+				`%s `+
+				`-threads %d `+
+				`-gateway "%s" `+
+				`-port %d `+
+				`-apiport %d `+
+				`-listenaddress "%s" `+
+				`-listenport %d `+
+				`-acks %d `+
+				`-ackDelay %d `+
+				`-congestion %d `+
+				`-decimate %d `+
+				`-minBeforeDecimation %d `+
+				`-multistream %v `+
+				`-varAckDelay %d `,
+			verboseFlag,
+			qpepConfig.WinDivertThreads,
+			qpepConfig.GatewayHost,
+			qpepConfig.GatewayPort,
+			qpepConfig.GatewayAPIPort,
+			qpepConfig.ListenHost,
+			qpepConfig.ListenPort,
 			qpepConfig.Acks,
 			qpepConfig.AckDelay,
 			qpepConfig.Congestion,
 			qpepConfig.Decimate,
 			qpepConfig.DelayDecimate,
-			qpepConfig.GatewayHost,
-			qpepConfig.GatewayPort,
 			qpepConfig.MultiStream,
-			qpepConfig.Verbose,
-			qpepConfig.VarAckDelay,
-			qpepConfig.WinDivertThreads),
+			qpepConfig.VarAckDelay),
 	}
 
 	cmd := exec.Command(exeFile)

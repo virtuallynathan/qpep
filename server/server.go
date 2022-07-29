@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -16,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/parvit/qpep/api"
 	"github.com/parvit/qpep/client"
 	"github.com/parvit/qpep/shared"
 
@@ -23,7 +25,11 @@ import (
 )
 
 var (
-	serverConfig = ServerConfig{ListenHost: "0.0.0.0", ListenPort: 443}
+	ServerConfiguration = ServerConfig{
+		ListenHost: "0.0.0.0",
+		ListenPort: 443,
+		APIPort:    444,
+	}
 	quicListener quic.Listener
 	quicSession  quic.Session
 )
@@ -31,6 +37,7 @@ var (
 type ServerConfig struct {
 	ListenHost string
 	ListenPort int
+	APIPort    int
 }
 
 func RunServer(ctx context.Context) {
@@ -44,7 +51,12 @@ func RunServer(ctx context.Context) {
 		}
 	}()
 
-	listenAddr := serverConfig.ListenHost + ":" + strconv.Itoa(serverConfig.ListenPort)
+	// update configuration from flags
+	ServerConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
+	ServerConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
+	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
+
+	listenAddr := ServerConfiguration.ListenHost + ":" + strconv.Itoa(ServerConfiguration.ListenPort)
 	log.Printf("Opening QPEP Server on: %s", listenAddr)
 	var err error
 	quicListener, err = quic.ListenAddr(listenAddr, generateTLSConfig(), &client.QuicClientConfiguration)
@@ -128,17 +140,41 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 			debug.PrintStack()
 		}
 	}()
-	log.Printf("Opening TCP Connection to %s\n", qpepHeader.DestAddr.String())
-	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), time.Duration(10)*time.Second)
+
+	timeOut := time.Duration(10) * time.Second
+
+	log.Printf("Opening TCP Connection to %s, from %s\n", qpepHeader.DestAddr, qpepHeader.SourceAddr)
+	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), timeOut)
 	if err != nil {
 		log.Printf("Unable to open TCP connection from QPEP stream: %s", err)
 		return
 	}
-	log.Printf("Opened TCP Conn")
+	log.Printf("Opened TCP Conn %s -> %s\n", qpepHeader.SourceAddr, qpepHeader.DestAddr)
+
+	trackedAddress := qpepHeader.SourceAddr.IP.String()
+	trackedAddressKey := fmt.Sprintf(api.QUIC_CONN, qpepHeader.SourceAddr.IP.String())
+	proxyAddress := tcpConn.(*net.TCPConn).LocalAddr().String()
+
+	api.Statistics.Increment(api.TOTAL_CONNECTIONS)
+	api.Statistics.Increment(trackedAddressKey)
+	defer func() {
+		api.Statistics.Decrement(trackedAddressKey)
+		api.Statistics.Decrement(api.TOTAL_CONNECTIONS)
+	}()
+
+	tcpConn.SetReadDeadline(time.Now().Add(timeOut))
+	tcpConn.SetWriteDeadline(time.Now().Add(timeOut))
 
 	var streamWait sync.WaitGroup
 	streamWait.Add(2)
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
+		defer func() {
+			api.Statistics.DeleteMappedAddress(proxyAddress)
+			streamWait.Done()
+		}()
+
+		api.Statistics.SetMappedAddress(proxyAddress, trackedAddress)
+
 		_, err = io.Copy(dst, src)
 		err1 := dst.SetLinger(3)
 		if err1 != nil {
@@ -148,9 +184,10 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 		if err != nil {
 			log.Printf("Error on Copy %s", err)
 		}
-		streamWait.Done()
 	}
 	streamTCPtoQUIC := func(dst quic.Stream, src *net.TCPConn) {
+		defer streamWait.Done()
+
 		_, err = io.Copy(dst, src)
 		log.Printf("Finished Copying TCP Conn %s->%s", src.LocalAddr().String(), src.RemoteAddr().String())
 		err1 := src.SetLinger(3)
@@ -161,7 +198,6 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 		if err != nil {
 			log.Printf("Error on Copy %s", err)
 		}
-		streamWait.Done()
 	}
 
 	go streamQUICtoTCP(tcpConn.(*net.TCPConn), stream)

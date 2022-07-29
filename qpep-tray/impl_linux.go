@@ -17,8 +17,14 @@ const (
 func getClientCommand() *exec.Cmd {
 	exeFile := filepath.Join(ExeDir, EXENAME)
 
+	var verboseFlag = ""
+	if qpepConfig.Verbose {
+		verboseFlag = "--verbose"
+	}
+
 	cmd := exec.Command(exeFile,
 		"--client",
+		fmt.Sprintf("%v", verboseFlag),
 		"--acks", fmt.Sprintf("%d", qpepConfig.Acks),
 		"--ackDelay", fmt.Sprintf("%d", qpepConfig.AckDelay),
 		"--congestion", fmt.Sprintf("%d", qpepConfig.Congestion),
@@ -29,7 +35,6 @@ func getClientCommand() *exec.Cmd {
 		"--listenaddress", fmt.Sprintf("%s", qpepConfig.ListenHost),
 		"--listenport", fmt.Sprintf("%d", qpepConfig.ListenPort),
 		"--multistream", fmt.Sprintf("%v", qpepConfig.MultiStream),
-		"--verbose", fmt.Sprintf("%v", qpepConfig.Verbose),
 		"--varAckDelay", fmt.Sprintf("%d", qpepConfig.VarAckDelay),
 		"--threads", fmt.Sprintf("%d", qpepConfig.WinDivertThreads))
 
@@ -47,7 +52,13 @@ func getClientCommand() *exec.Cmd {
 func getServerCommand() *exec.Cmd {
 	exeFile := filepath.Join(ExeDir, EXENAME)
 
+	var verboseFlag = ""
+	if qpepConfig.Verbose {
+		verboseFlag = "--verbose"
+	}
+
 	cmd := exec.Command(exeFile,
+		fmt.Sprintf("%v", verboseFlag),
 		"--acks", fmt.Sprintf("%d", qpepConfig.Acks),
 		"--ackDelay", fmt.Sprintf("%d", qpepConfig.AckDelay),
 		"--congestion", fmt.Sprintf("%d", qpepConfig.Congestion),
@@ -55,10 +66,10 @@ func getServerCommand() *exec.Cmd {
 		"--minBeforeDecimation", fmt.Sprintf("%d", qpepConfig.DelayDecimate),
 		"--gateway", fmt.Sprintf("%s", qpepConfig.GatewayHost),
 		"--port", fmt.Sprintf("%d", qpepConfig.GatewayPort),
+		"--apiport", fmt.Sprintf("%d", qpepConfig.GatewayAPIPort),
 		"--listenaddress", fmt.Sprintf("%s", qpepConfig.ListenHost),
 		"--listenport", fmt.Sprintf("%d", qpepConfig.ListenPort),
 		"--multistream", fmt.Sprintf("%v", qpepConfig.MultiStream),
-		"--verbose", fmt.Sprintf("%v", qpepConfig.Verbose),
 		"--varAckDelay", fmt.Sprintf("%d", qpepConfig.VarAckDelay),
 		"--threads", fmt.Sprintf("%d", qpepConfig.WinDivertThreads))
 

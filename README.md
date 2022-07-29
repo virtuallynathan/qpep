@@ -40,6 +40,10 @@ _There is no need to install those manually_ and please don't do so as it might 
 This module compiles without additional dependencies so just cd into qpep-tray directory and run:
 `go build -ldflags -H=windowsgui`
 
+Note: Be sure to set the environment variable CGO_ENABLED to 0 to build qpep-tray like this:
+- Windows: `set CGO_ENABLED=1`
+- Linux: `set CGO_ENABLED=0`
+
 The flags `-ldflags -H=windowsgui` allow the binary to run without a visible console in the background.
 It should be placed in the same folder as the qpep main executable and will need to be launched with administrative priviledges to allow the qpep client to work properly.
 
@@ -52,6 +56,7 @@ decimate: 4
 minBeforeDecimation: 100
 gateway: 198.18.0.254
 port: 443
+apiport: 444
 listenaddress: 192.168.1.10
 listenport: 9443
 multistream: true

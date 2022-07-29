@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/parvit/qpep/api"
 	"github.com/parvit/qpep/shared"
 	"github.com/parvit/qpep/windivert"
 	"golang.org/x/net/context"
@@ -38,6 +39,7 @@ type ClientConfig struct {
 	ListenPort        int
 	GatewayHost       string
 	GatewayPort       int
+	APIPort           int
 	QuicStreamTimeout int
 	MultiStream       bool
 	IdleTimeout       time.Duration
@@ -57,10 +59,23 @@ func RunClient(ctx context.Context) {
 		}
 	}()
 	log.Println("Starting TCP-QPEP Tunnel Listener")
+
+	// update configuration from flags
+	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
+	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
+	ClientConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
+	ClientConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
+	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
+	ClientConfiguration.MultiStream = shared.QuicConfiguration.MultiStream
+	ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
+	ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
+
 	log.Printf("Binding to TCP %s:%d", ClientConfiguration.ListenHost, ClientConfiguration.ListenPort)
 	var err error
-	proxyListener, err = NewClientProxyListener("tcp", &net.TCPAddr{IP: net.ParseIP(ClientConfiguration.ListenHost),
-		Port: ClientConfiguration.ListenPort})
+	proxyListener, err = NewClientProxyListener("tcp", &net.TCPAddr{
+		IP:   net.ParseIP(ClientConfiguration.ListenHost),
+		Port: ClientConfiguration.ListenPort,
+	})
 	if err != nil {
 		log.Printf("Encountered error when binding client proxy listener: %s", err)
 		return
@@ -73,7 +88,8 @@ func RunClient(ctx context.Context) {
 		case <-ctx.Done():
 			proxyListener.Close()
 			return
-		case <-time.After(10 * time.Millisecond):
+		case <-time.After(1 * time.Second):
+			apiStatusCheck()
 			continue
 		}
 	}
@@ -160,6 +176,10 @@ func handleTCPConn(tcpConn net.Conn) {
 	if diverted == windivert.DIVERT_OK {
 		log.Printf("Diverted connection: %v:%v %v:%v", srcAddress, srcPort, dstAddress, dstPort)
 
+		sessionHeader.SourceAddr = &net.TCPAddr{
+			IP:   net.ParseIP(srcAddress),
+			Port: srcPort,
+		}
 		sessionHeader.DestAddr = &net.TCPAddr{
 			IP:   net.ParseIP(dstAddress),
 			Port: dstPort,
@@ -214,6 +234,7 @@ func openQuicSession() (quic.Session, error) {
 	tlsConf := &tls.Config{InsecureSkipVerify: true, NextProtos: []string{"qpep"}}
 	gatewayPath := ClientConfiguration.GatewayHost + ":" + strconv.Itoa(ClientConfiguration.GatewayPort)
 	quicClientConfig := QuicClientConfiguration
+	log.Printf("Dialing QUIC Session: %s\n", gatewayPath)
 	for i := 0; i < ClientConfiguration.ConnectionRetries; i++ {
 		session, err = quic.DialAddr(gatewayPath, tlsConf, &quicClientConfig)
 		if err == nil {
@@ -225,4 +246,15 @@ func openQuicSession() (quic.Session, error) {
 
 	log.Printf("Max Retries Exceeded. Unable to Open QUIC Session: %s\n", err)
 	return nil, err
+}
+
+func apiStatusCheck() {
+	localAddr := ClientConfiguration.ListenHost
+	apiAddr := ClientConfiguration.GatewayHost
+	apiPort := ClientConfiguration.APIPort
+	if response := api.RequestEcho(localAddr, apiAddr, apiPort); response != nil {
+		log.Printf("Gateway Echo OK\n")
+		return
+	}
+	log.Printf("Gateway Echo FAILED\n")
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/parvit/qpep/api"
 	"github.com/parvit/qpep/client"
 	"github.com/parvit/qpep/server"
 	"github.com/parvit/qpep/shared"
@@ -24,34 +26,24 @@ func main() {
 		}
 	}()
 
+	f, err := os.OpenFile("qpep.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	wrt := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(wrt)
+
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 
-	client.ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
-	client.ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
-	client.ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
-	client.ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
-	client.ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
+	shared.ParseFlags(os.Args) // don't skip first parameter
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
 	if shared.QuicConfiguration.ClientFlag {
-		log.Println("Running Client")
-		windivert.EnableDiverterLogging(client.ClientConfiguration.Verbose)
-
-		gatewayHost := shared.QuicConfiguration.GatewayIP
-		gatewayPort := shared.QuicConfiguration.GatewayPort
-		listenHost := shared.QuicConfiguration.ListenIP
-		listenPort := shared.QuicConfiguration.ListenPort
-		threads := shared.QuicConfiguration.WinDivertThreads
-
-		if windivert.InitializeWinDivertEngine(gatewayHost, listenHost, gatewayPort, listenPort, threads) != windivert.DIVERT_OK {
-			windivert.CloseWinDivertEngine()
-			os.Exit(1)
-		}
-		go client.RunClient(execContext)
+		runAsClient(execContext)
 	} else {
-		log.Println("Running Server")
-		go server.RunServer(execContext)
+		runAsServer(execContext)
 	}
 
 	interruptListener := make(chan os.Signal)
@@ -69,4 +61,31 @@ func main() {
 
 	log.Println("Exiting...")
 	os.Exit(1)
+}
+
+func runAsClient(execContext context.Context) {
+	log.Println("Running Client")
+
+	windivert.EnableDiverterLogging(shared.QuicConfiguration.Verbose)
+
+	gatewayHost := shared.QuicConfiguration.GatewayIP
+	gatewayPort := shared.QuicConfiguration.GatewayPort
+	listenHost := shared.QuicConfiguration.ListenIP
+	listenPort := shared.QuicConfiguration.ListenPort
+	threads := shared.QuicConfiguration.WinDivertThreads
+
+	if code := windivert.InitializeWinDivertEngine(gatewayHost, listenHost, gatewayPort, listenPort, threads); code != windivert.DIVERT_OK {
+		windivert.CloseWinDivertEngine()
+
+		log.Printf("ERROR: Could not initialize WinDivert engine, code %d\n", code)
+		os.Exit(1)
+	}
+
+	go client.RunClient(execContext)
+}
+
+func runAsServer(execContext context.Context) {
+	log.Println("Running Server")
+	go server.RunServer(execContext)
+	go api.RunAPIServer(execContext)
 }

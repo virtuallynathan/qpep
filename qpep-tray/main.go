@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -21,6 +22,14 @@ func main() {
 	signal.Notify(interruptListener, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	ExeDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+
+	f, err := os.OpenFile("qpep-tray.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	wrt := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(wrt)
 
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
 

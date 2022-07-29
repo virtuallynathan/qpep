@@ -89,6 +89,7 @@ if %BUILD64% NEQ 0 (
     echo OK
 
     ECHO [Build x64 server/client]
+    set CGO_ENABLED=1
     go build -o build\x64\qpep.exe
     if %ERRORLEVEL% GEQ 1 goto fail
 
@@ -97,6 +98,7 @@ if %BUILD64% NEQ 0 (
     ECHO [Build x64 tray icon]
     pushd qpep-tray
     if %ERRORLEVEL% GEQ 1 goto fail
+    set CGO_ENABLED=0
     go build -ldflags -H=windowsgui -o ..\build\x64\qpep-tray.exe
     if %ERRORLEVEL% GEQ 1 goto fail
     popd
@@ -114,6 +116,7 @@ if %BUILD32% NEQ 0 (
     echo OK
 
     ECHO [Build x86 server/client]
+    set CGO_ENABLED=1
     go build -x -o build\x86\qpep.exe
     if %ERRORLEVEL% GEQ 1 goto fail
 
@@ -122,6 +125,7 @@ if %BUILD32% NEQ 0 (
     ECHO [Build x86 tray icon]
     pushd qpep-tray
     if %ERRORLEVEL% GEQ 1 goto fail
+    set CGO_ENABLED=0
     go build -ldflags -H=windowsgui -o ..\build\x86\qpep-tray.exe
     if %ERRORLEVEL% GEQ 1 goto fail
     popd
