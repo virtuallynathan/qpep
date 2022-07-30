@@ -16,7 +16,7 @@ const (
 	API_STATUS_PATH string = "/api/v1/status/:addr"
 )
 
-func RunAPIServer(ctx context.Context) {
+func RunServer(ctx context.Context, cancel context.CancelFunc) {
 	// update configuration from flags
 	host := shared.QuicConfiguration.ListenIP
 	apiPort := shared.QuicConfiguration.GatewayAPIPort
@@ -28,7 +28,20 @@ func RunAPIServer(ctx context.Context) {
 	rtr.registerHandlers()
 
 	srv := NewServer(listenAddr, rtr, ctx)
-	log.Println(srv.ListenAndServe())
+	go func() {
+		<-ctx.Done()
+		if srv != nil {
+			srv.Close()
+			srv = nil
+		}
+		cancel()
+	}()
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Printf("Error running API server: %v", err)
+	}
+	srv = nil
+	cancel()
 
 	log.Println("Closed API Server")
 }
@@ -55,7 +68,7 @@ func NewRouter() *APIRouter {
 
 func apiHeaders(next httprouter.Handle) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		log.Printf("0 %s\n", formatRequest(r))
+		log.Printf("%s\n", formatRequest(r))
 
 		w.Header().Add("Content-Type", "application/json")
 		next(w, r, ps)
@@ -65,20 +78,20 @@ func apiHeaders(next httprouter.Handle) httprouter.Handle {
 type notFoundHandler struct{}
 
 func (n *notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("1 %s\n", formatRequest(r))
+	log.Printf("%s\n", formatRequest(r))
 	w.WriteHeader(http.StatusNotFound)
 }
 
 type methodsNotAllowedHandler struct{}
 
 func (n *methodsNotAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("2 %s\n", formatRequest(r))
+	log.Printf("%s\n", formatRequest(r))
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
 func (r *APIRouter) registerHandlers() {
 	r.handler.PanicHandler = func(w http.ResponseWriter, r *http.Request, i interface{}) {
-		log.Printf("3 %s\n", formatRequest(r))
+		log.Printf("%s\n", formatRequest(r))
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	r.handler.NotFound = &notFoundHandler{}

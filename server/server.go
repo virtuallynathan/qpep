@@ -40,7 +40,7 @@ type ServerConfig struct {
 	APIPort    int
 }
 
-func RunServer(ctx context.Context) {
+func RunServer(ctx context.Context, cancel context.CancelFunc) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("PANIC: %v", err)
@@ -49,12 +49,14 @@ func RunServer(ctx context.Context) {
 		if quicListener != nil {
 			quicListener.Close()
 		}
+		cancel()
 	}()
 
 	// update configuration from flags
-	ServerConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
-	ServerConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
-	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
+	if err := validateConfiguration(); err != nil {
+		log.Printf("Invalid configuation provided: %v\n", err)
+		return
+	}
 
 	listenAddr := ServerConfiguration.ListenHost + ":" + strconv.Itoa(ServerConfiguration.ListenPort)
 	log.Printf("Opening QPEP Server on: %s", listenAddr)
@@ -231,4 +233,20 @@ func generateTLSConfig() *tls.Config {
 		Certificates: []tls.Certificate{tlsCert},
 		NextProtos:   []string{"qpep"},
 	}
+}
+
+func validateConfiguration() error {
+	ServerConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
+	ServerConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
+	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
+
+	shared.AssertParamIP("listen host", ServerConfiguration.ListenHost)
+	shared.AssertParamPort("listen port", ServerConfiguration.ListenPort)
+
+	shared.AssertParamPort("api port", ServerConfiguration.APIPort)
+
+	shared.AssertParamPortsDifferent("ports", ServerConfiguration.ListenPort, ServerConfiguration.APIPort)
+
+	log.Printf("Server configuration validation OK\n")
+	return nil
 }

@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os/exec"
+
+	"github.com/parvit/qpep/shared"
 )
 
 var serverCmd *exec.Cmd
@@ -10,7 +12,7 @@ var serverCmd *exec.Cmd
 func startServer() error {
 	if serverCmd != nil {
 		log.Println("ERROR: Cannot start an already running server, first stop it")
-		return ErrFailed
+		return shared.ErrFailed
 	}
 
 	serverCmd = getServerCommand()
@@ -18,7 +20,7 @@ func startServer() error {
 	if err := serverCmd.Start(); err != nil {
 		ErrorMsg("Could not start server program: %v", err)
 		serverCmd = nil
-		return ErrCommandNotStarted
+		return shared.ErrCommandNotStarted
 	}
 	InfoMsg("Server started")
 

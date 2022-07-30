@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"runtime/debug"
@@ -19,12 +18,6 @@ const (
 	TooltipMsgDisconnected = "QPep TCP accelerator - Status: Disconnected"
 	TooltipMsgConnecting   = "QPep TCP accelerator - Status: Connecting"
 	TooltipMsgConnected    = "QPep TCP accelerator - Status: Connected"
-)
-
-var (
-	ErrFailed            = errors.New("failed")
-	ErrNoCommand         = errors.New("could not create command")
-	ErrCommandNotStarted = errors.New("could not start command")
 )
 
 func ErrorMsg(message string, parameters ...interface{}) {

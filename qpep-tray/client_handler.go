@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os/exec"
+
+	"github.com/parvit/qpep/shared"
 )
 
 var clientCmd *exec.Cmd
@@ -10,7 +12,7 @@ var clientCmd *exec.Cmd
 func startClient() error {
 	if clientCmd != nil {
 		log.Println("ERROR: Cannot start an already running client, first stop it")
-		return ErrFailed
+		return shared.ErrFailed
 	}
 
 	clientCmd = getClientCommand()
@@ -18,7 +20,7 @@ func startClient() error {
 	if err := clientCmd.Start(); err != nil {
 		ErrorMsg("Could not start client program: %v", err)
 		clientCmd = nil
-		return ErrCommandNotStarted
+		return shared.ErrCommandNotStarted
 	}
 	InfoMsg("Client started")
 
