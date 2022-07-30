@@ -53,10 +53,7 @@ func RunServer(ctx context.Context, cancel context.CancelFunc) {
 	}()
 
 	// update configuration from flags
-	if err := validateConfiguration(); err != nil {
-		log.Printf("Invalid configuation provided: %v\n", err)
-		return
-	}
+	validateConfiguration()
 
 	listenAddr := ServerConfiguration.ListenHost + ":" + strconv.Itoa(ServerConfiguration.ListenPort)
 	log.Printf("Opening QPEP Server on: %s", listenAddr)
@@ -235,7 +232,7 @@ func generateTLSConfig() *tls.Config {
 	}
 }
 
-func validateConfiguration() error {
+func validateConfiguration() {
 	ServerConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
 	ServerConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
 	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
@@ -248,5 +245,4 @@ func validateConfiguration() error {
 	shared.AssertParamPortsDifferent("ports", ServerConfiguration.ListenPort, ServerConfiguration.APIPort)
 
 	log.Printf("Server configuration validation OK\n")
-	return nil
 }

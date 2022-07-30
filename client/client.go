@@ -62,9 +62,7 @@ func RunClient(ctx context.Context, cancel context.CancelFunc) {
 	log.Println("Starting TCP-QPEP Tunnel Listener")
 
 	// update configuration from flags
-	if err := validateConfiguration(); err != nil {
-
-	}
+	validateConfiguration()
 
 	log.Printf("Binding to TCP %s:%d", ClientConfiguration.ListenHost, ClientConfiguration.ListenPort)
 	var err error
@@ -255,7 +253,7 @@ func apiStatusCheck() {
 	log.Printf("Gateway Echo FAILED\n")
 }
 
-func validateConfiguration() error {
+func validateConfiguration() {
 	// copy values for client configuration
 	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
@@ -280,5 +278,4 @@ func validateConfiguration() error {
 
 	// validation ok
 	log.Printf("Client configuration validation OK\n")
-	return nil
 }

@@ -49,13 +49,13 @@ func main() {
 	interruptListener := make(chan os.Signal, 1)
 	signal.Notify(interruptListener, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-CHECKLOOP:
+TERMINATIONLOOP:
 	for {
 		select {
 		case <-interruptListener:
-			break CHECKLOOP
+			break TERMINATIONLOOP
 		case <-execContext.Done():
-			break CHECKLOOP
+			break TERMINATIONLOOP
 		case <-time.After(100 * time.Millisecond):
 			continue
 		}
