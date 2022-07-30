@@ -273,6 +273,7 @@ func validateConfiguration() {
 
 	shared.AssertParamPort("api port", ClientConfiguration.APIPort)
 
+	shared.AssertParamHostsDifferent("hosts", ClientConfiguration.GatewayHost, ClientConfiguration.ListenHost)
 	shared.AssertParamPortsDifferent("ports", ClientConfiguration.GatewayPort,
 		ClientConfiguration.ListenPort, ClientConfiguration.APIPort)
 

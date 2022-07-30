@@ -46,3 +46,28 @@ func AssertParamPortsDifferent(name string, values ...int) error {
 
 	return nil
 }
+
+func AssertParamHostsDifferent(name string, values ...string) error {
+	switch len(values) {
+	case 0:
+		fallthrough
+	case 1:
+		return nil
+
+	case 2:
+		if values[0] == values[1] {
+			log.Printf("Addresses '%s' must all be different: %v\n", name, values)
+			panic(ErrConfigurationValidationFailed)
+		}
+	default:
+		sort.Strings(values)
+		for i := 1; i < len(values); i++ {
+			if values[i-1] == values[i] {
+				log.Printf("Addresses '%s' must all be different: %v\n", name, values)
+				panic(ErrConfigurationValidationFailed)
+			}
+		}
+	}
+
+	return nil
+}
