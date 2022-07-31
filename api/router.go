@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/parvit/qpep/shared"
+	"github.com/parvit/qpep/webgui"
 )
 
 const (
@@ -26,6 +28,7 @@ func RunAPIServer(ctx context.Context) {
 
 	rtr := NewRouter()
 	rtr.registerHandlers()
+	rtr.registerStaticFiles()
 
 	srv := NewServer(listenAddr, rtr, ctx)
 	log.Println(srv.ListenAndServe())
@@ -87,4 +90,19 @@ func (r *APIRouter) registerHandlers() {
 	r.handler.HandleMethodNotAllowed = true
 	r.handler.GET(API_ECHO_PATH, apiHeaders(apiEcho))
 	r.handler.GET(API_STATUS_PATH, apiHeaders(apiStatus))
+}
+
+func (r *APIRouter) registerStaticFiles() {
+	for path, _ := range webgui.FilesData {
+		r.handler.GET("/"+path, serveFile)
+	}
+}
+
+func serveFile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	urlPath := r.URL.Path[1:]
+
+	typeFile := mime.TypeByExtension(urlPath)
+	w.Header().Add("Content-Type", typeFile)
+
+	w.Write(webgui.FilesData[urlPath])
 }
