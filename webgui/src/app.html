@@ -1,0 +1,40 @@
+<template>
+  <!-- Simple header with fixed tabs. -->
+  <div
+    class="mdl-layout mdl-js-layout mdl-layout--fixed-header mdl-layout--fixed-tabs"
+  >
+    <header class="mdl-layout__header">
+      <div class="mdl-layout__header-row">
+        <!-- Title -->
+        <span class="mdl-layout-title">${title}</span>
+      </div>
+
+      <!-- Tabs -->
+      <div class="mdl-layout__tab-bar mdl-js-ripple-effect">
+        <a repeat.for="mod of modules" href="#fixed-tab-${$index}" class="mdl-layout__tab">${mod}</a>
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <require from="./status-graph"></require>
+
+      <section repeat.for="mod of modules" class="mdl-layout__tab-panel" id="fixed-tab-${$index}">
+        <div class="page-content">
+          <status-graph></status-graph>
+        </div>
+      </section>
+    </main>
+    
+    <footer class="mdl-mini-footer">
+      <div class="mdl-mini-footer__left-section">
+        <div class="mdl-logo">${title}</div>
+      </div>
+      <div class="mdl-mini-footer__right-section">
+        <ul class="mdl-mini-footer__link-list">
+          <li><a href="#">Help</a></li>
+          <li><a href="#">Privacy & Terms</a></li>
+        </ul>
+      </div>
+    </footer>
+  </div>
+</template>
