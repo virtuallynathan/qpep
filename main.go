@@ -41,17 +41,27 @@ func main() {
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
 	if shared.QuicConfiguration.ClientFlag {
-		runAsClient(execContext)
+		runAsClient(execContext, cancelExecutionFunc)
 	} else {
-		runAsServer(execContext)
+		runAsServer(execContext, cancelExecutionFunc)
 	}
 
-	interruptListener := make(chan os.Signal)
+	interruptListener := make(chan os.Signal, 1)
 	signal.Notify(interruptListener, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	<-interruptListener
+
+TERMINATIONLOOP:
+	for {
+		select {
+		case <-interruptListener:
+			break TERMINATIONLOOP
+		case <-execContext.Done():
+			break TERMINATIONLOOP
+		case <-time.After(100 * time.Millisecond):
+			continue
+		}
+	}
 
 	cancelExecutionFunc()
-
 	<-execContext.Done()
 
 	log.Println("Shutdown...")
@@ -63,7 +73,7 @@ func main() {
 	os.Exit(1)
 }
 
-func runAsClient(execContext context.Context) {
+func runAsClient(execContext context.Context, cancel context.CancelFunc) {
 	log.Println("Running Client")
 
 	windivert.EnableDiverterLogging(shared.QuicConfiguration.Verbose)
@@ -81,11 +91,11 @@ func runAsClient(execContext context.Context) {
 		os.Exit(1)
 	}
 
-	go client.RunClient(execContext)
+	go client.RunClient(execContext, cancel)
 }
 
-func runAsServer(execContext context.Context) {
+func runAsServer(execContext context.Context, cancel context.CancelFunc) {
 	log.Println("Running Server")
-	go server.RunServer(execContext)
-	go api.RunAPIServer(execContext)
+	go server.RunServer(execContext, cancel)
+	go api.RunServer(execContext, cancel)
 }
