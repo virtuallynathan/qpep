@@ -1,0 +1,53 @@
+<template>
+  <require from="datatables.net-dt/css/jquery.dataTables.css"></require>
+  <require from="./values-table"></require>
+
+  <div id="server-side" if.bind="isserver">
+    <div class="mdl-grid">
+      <div class="mdl-cell mdl-cell--4-col">
+        <values-table
+          id="server-select"
+          paragraph="Client select"
+          table-id="table-select"
+          source="testdata_server.json"
+        ></values-table>
+      </div>
+      <div class="mdl-cell mdl-cell--1-col"></div>
+      <div class="mdl-cell mdl-cell--7-col">
+        <values-table
+          id="server-info"
+          paragraph="General info"
+          table-id="table-info"
+          source="testdata_server.json"
+        ></values-table>
+        <values-table
+          id="server-stats"
+          paragraph="Statistics"
+          table-id="table-stats"
+          source="testdata_stats.json"
+        ></values-table>
+      </div>
+    </div>
+  </div>
+  <div else id="client-side">
+    <div class="mdl-grid">
+      <div class="mdl-cell mdl-cell--4-col">
+        <values-table
+          id="client-info"
+          paragraph="General Info"
+          table-id="table-info"
+          source="testdata_server.json"
+        ></values-table>
+      </div>
+      <div class="mdl-cell mdl-cell--1-col"></div>
+      <div class="mdl-cell mdl-cell--7-col">
+        <values-table
+          id="client-stats"
+          paragraph="Statistics"
+          table-id="table-stats"
+          source="testdata_stats.json"
+        ></values-table>
+      </div>
+    </div>
+  </div>
+</template>

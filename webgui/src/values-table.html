@@ -1,0 +1,45 @@
+<template>
+  <div class="table-header typo-styles__demo mdl-typography--display-1">${paragraph}</div>
+  <hr />
+  <div id="${tableId}_wrapper" class="dataTables_wrapper">
+    <table
+      id="${tableId}"
+      class="display dataTable"
+      style="width: 100%"
+      aria-describedby="${tableId}_info"
+    >
+      <thead>
+        <tr>
+          <th
+            class="sorting sorting_asc"
+            tabindex="0"
+            aria-controls="${tableId}"
+            rowspan="1"
+            colspan="1"
+            aria-sort="ascending"
+            aria-label="Name: activate to sort column descending"
+            style="width: 94.0156px"
+          >
+            Attribute
+          </th>
+          <th
+            class="sorting"
+            tabindex="0"
+            aria-controls="${tableId}"
+            rowspan="1"
+            colspan="1"
+            aria-label="Position: activate to sort column ascending"
+            style="width: 124.391px"
+          >
+            Value
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="odd">
+          <td valign="top" colspan="2" class="dataTables_empty">Loading...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>

@@ -4,35 +4,55 @@
     class="mdl-layout mdl-js-layout mdl-layout--fixed-header mdl-layout--fixed-tabs"
   >
     <header class="mdl-layout__header">
-      <div class="mdl-layout__header-row">
-        <!-- Title -->
-        <span class="mdl-layout-title">${title}</span>
-      </div>
-
       <!-- Tabs -->
       <div class="mdl-layout__tab-bar mdl-js-ripple-effect">
-        <a repeat.for="mod of modules" href="#fixed-tab-${$index}" class="mdl-layout__tab">${mod}</a>
+        <a
+          repeat.for="mod of modules"
+          id="fixed-tab-${mod}"
+          href="#fixed-tab-${mod}"
+          class="mdl-layout__tab"
+          >${mod}</a
+        >
       </div>
     </header>
 
     <main class="mdl-layout__content">
       <require from="./status-graph"></require>
+      <require from="./statistics"></require>
 
-      <section repeat.for="mod of modules" class="mdl-layout__tab-panel" id="fixed-tab-${$index}">
+      <div class="lds-grid">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+
+      <section class="mdl-layout__tab-panel" id="fixed-tab-status-graph">
         <div class="page-content">
           <status-graph></status-graph>
         </div>
       </section>
+
+      <section class="mdl-layout__tab-panel" id="fixed-tab-statistics">
+        <div class="page-content">
+          <statistics></statistics>
+        </div>
+      </section>
     </main>
-    
+
     <footer class="mdl-mini-footer">
       <div class="mdl-mini-footer__left-section">
         <div class="mdl-logo">${title}</div>
       </div>
       <div class="mdl-mini-footer__right-section">
         <ul class="mdl-mini-footer__link-list">
-          <li><a href="#">Help</a></li>
-          <li><a href="#">Privacy & Terms</a></li>
+          <li><a href="#">Client version: </a></li>
+          <li><a href="#">Server version: </a></li>
         </ul>
       </div>
     </footer>

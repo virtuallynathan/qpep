@@ -1,13 +1,10 @@
-rem @echo off
+@echo off
 SETLOCAL EnableDelayedExpansion
 
-rem rmdir /Q /S dist
-if NOT "%ERRORLEVEL%" == "0" goto error
-
-rem npm run build
-if NOT "%ERRORLEVEL%" == "0" goto error
-
+rmdir /Q /S dist
 del *.go
+
+( call npm run build )
 if NOT "%ERRORLEVEL%" == "0" goto error
 
 echo package webgui > filelist.go
