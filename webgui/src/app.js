@@ -1,11 +1,11 @@
 import { LogManager } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("app");
 import { inject } from "aurelia-dependency-injection";
 import { Store } from "aurelia-store";
 
 import { EventAggregator } from 'aurelia-event-aggregator';
 
-import { setHostTypeAndPort, showMessage, showLoader, hideLoader } from "./actions";
+import { setHostModeAndPort, showMessage, showLoader, hideLoader } from "./actions";
 
 var $ = require("jquery");
 $.fn.exists = function () {
@@ -39,27 +39,23 @@ export class App {
     showLoader();
   }
 
-  stateChanged(newState, oldState) {}
+  stateChanged(newState, oldState) {
+    log.info( 'app-state', oldState, '->', newState );
+  }
 
   routeNavigationCompleted = (eventArgs, eventName) => {
     try {
-      // var type = "client";
-      // var port = 444;
-      var type = eventArgs.instruction.queryParams.type;
+      var mode = eventArgs.instruction.queryParams.mode;
       var port = ~~(eventArgs.instruction.queryParams.port);
 
-      setHostTypeAndPort( type, port );
+      setHostModeAndPort( mode, port );
 
       hideLoader();
     } catch (err) {
-      log.error(
-        "Cannot work without the required 'type' and 'port' parameters, please restart"
-      );
-      showMessage(
-        "Failed to start for an internal error, check the console log and restart",
-        "error"
-      );
+      log.error(err);
+      showMessage( err, "error" );
 
+      // disable tabs
       $(function () {
         $(".mdl-layout__tab").removeAttr("href");
         $(".is-active").removeClass("is-active");

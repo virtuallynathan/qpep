@@ -1,26 +1,26 @@
 
 import store from './store';
 import { LogManager } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("actions");
 
 import * as Mutations from './mutations';
 
-function setHostTypeAndPort(type, port) {
-    if( typeof(type) !== 'string' || typeof(port) !== 'number' ) {
-        throw 'It\'s required to pass valid values for type and port parameters';
+function setHostModeAndPort(mode, port) {
+    if( typeof(mode) !== 'string' || typeof(port) !== 'number' ) {
+        throw 'It\'s required to pass valid values for mode and port parameters';
     }
-    type = type.toLowerCase();
-    switch(type) {
+    mode = mode.toLowerCase();
+    switch(mode) {
         case 'client':
         case 'server':
             break;
         default:
-            throw 'The only admitted values for type are \'client\' or \'server\'';
+            throw 'The only admitted values for mode are \'client\' or \'server\'';
     }
     if( port <= 0 )
         throw 'The port parameter must be a positive integer';
 
-    store.dispatch(Mutations.setHostTypeAndPort, type, port);
+    store.dispatch(Mutations.setHostModeAndPort, mode, port);
 }
 
 function showMessage(msg, type) {
@@ -47,7 +47,7 @@ function hideLoader() {
 }
 
 export {
-    setHostTypeAndPort,
+    setHostModeAndPort,
     showMessage,
     showLoader,
     hideLoader,

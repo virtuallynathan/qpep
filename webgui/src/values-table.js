@@ -1,5 +1,5 @@
 import { LogManager, bindable } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("values-tables");
 
 var $ = require("jquery");
 var DataTable = require("datatables.net-dt");

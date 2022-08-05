@@ -1,8 +1,22 @@
 import { LogManager } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("stats");
 
+import { inject } from "aurelia-dependency-injection";
+import {BindingSignaler} from 'aurelia-templating-resources';
+import { connectTo } from "aurelia-store";
+
+@inject(BindingSignaler)
+@connectTo()
 export class StatisticsCustomElement {
-  isserver = true;
+  isServer = true;
+  signaler = null;
 
-  constructor() {}
+  constructor(signaler) {
+    this.signaler = signaler;
+  }
+  
+  stateChanged(newState, oldState) {
+    this.isServer = (newState.mode == 'server');
+  }
+
 }

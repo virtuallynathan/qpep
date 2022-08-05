@@ -1,5 +1,5 @@
 import { LogManager } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("graph");
 
 var $ = require("jquery");
 
@@ -21,6 +21,7 @@ export class StatusGraphCustomElement {
     var now = (new Date).timeNow();
 
     this.currentMax = 60;
+    this.source = '';
 
     this.dataUpload = {
       x: [now],
@@ -76,7 +77,7 @@ export class StatusGraphCustomElement {
       },
     };
 
-    this.updateTimer = setInterval(() => this.periodicUpdate(), 1000);
+    this.updateDataTimer = setInterval(() => this.periodicDataUpdate(), 1000);
   }
 
   attached() {
@@ -87,23 +88,39 @@ export class StatusGraphCustomElement {
   }
 
   detached() {
-    clearInterval(this.updateTimer);
+    clearInterval(this.updateDataTimer);
   }
 
-  periodicUpdate() {
+  periodicDataUpdate() {
     var $tab = $("status-graph");
     if ($tab.is(":visible") !== true) return; // skip update
 
-    if (this.dataUpload.x.length > this.currentMax) {
-      this.dataUpload.y.shift();
-      this.dataDownload.y.shift();
-      this.dataUpload.x.shift();
-      this.dataDownload.x.shift();
-    }
+    var up = this.dataUpload.y[0] + 200 * (0.5 + Math.random());
+    var dw = this.dataDownload.y[0] + 200 * (0.5 + Math.random());
 
-    // when reducing the slider, help it discard old values
+    fetch(this.source)
+      //.then((response) => response.json())
+      .then((data) => {
+        this.periodicGraphUpdate({
+          upload: up,
+          download: dw,
+        });
+      });
+  }
+
+  periodicGraphUpdate(data) {
+    var now = (new Date).timeNow();
+    var up = data.upload;
+    var dw = data.download;
+
+    // ensure the data is valid
+    if( up === undefined || up === null || dw === undefined || up === undefined )
+      return;
+
+    // discard old values
+    var currMax = Math.max( 1, (this.dataUpload.x.length - this.currentMax) / 2 );
     if (this.dataUpload.x.length > this.currentMax) {
-      for( var i=0; i<(this.dataUpload.x.length - this.currentMax) / 2; i++ ) {
+      for( var i=0; i<currMax; i++ ) {
         this.dataUpload.y.shift();
         this.dataDownload.y.shift();
         this.dataUpload.x.shift();
@@ -111,22 +128,19 @@ export class StatusGraphCustomElement {
       }
     }
 
-    var now = (new Date).timeNow();
-    this.dataUpload.x.push(now);
-    this.dataDownload.x.push(now);
+    this.dataUpload.x.push( now );
+    this.dataDownload.x.push( now );
 
-    var up = this.dataUpload.y[0] + 200 * (0.5 + Math.random());
-    var dw = this.dataDownload.y[0] + 200 * (0.5 + Math.random());
-    
-    this.dataUpload.y.push(up);
-    this.dataDownload.y.push(up);
+    this.dataUpload.y.push( up );
+    this.dataDownload.y.push( dw );
 
     Plotly.extendTraces(
       this.gd,
       {
-        y: [[up], [dw]],
+        y: [ [up], [dw] ],
       },
       [0, 1]
     );
   }
+
 }

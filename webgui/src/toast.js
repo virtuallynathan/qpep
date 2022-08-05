@@ -1,5 +1,5 @@
 import { LogManager } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("toast");
 import {BindingSignaler} from 'aurelia-templating-resources';
 import {inject} from 'aurelia-framework';
 

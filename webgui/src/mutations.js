@@ -1,9 +1,9 @@
 import store from "./store";
 import { LogManager } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("mutations");
 
-function setHostTypeAndPort(state, type, port) {
-  const newState = Object.assign({}, state, { type: type, port: port });
+function setHostModeAndPort(state, mode, port) {
+  const newState = Object.assign({}, state, { mode: mode, port: port });
   return newState;
 }
 
@@ -22,14 +22,9 @@ function hideLoader(state) {
   return newState;
 }
 
-store.registerAction('setHostTypeAndPort', setHostTypeAndPort);
-store.registerAction('showMessage', showMessage);
-store.registerAction('showLoader', showLoader);
-store.registerAction('hideLoader', hideLoader);
+store.registerAction("setHostModeAndPort", setHostModeAndPort);
+store.registerAction("showMessage", showMessage);
+store.registerAction("showLoader", showLoader);
+store.registerAction("hideLoader", hideLoader);
 
-export {
-    setHostTypeAndPort,
-    showMessage,
-    showLoader, 
-    hideLoader,
-};
+export { setHostModeAndPort, showMessage, showLoader, hideLoader };
