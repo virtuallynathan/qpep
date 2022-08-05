@@ -62,6 +62,7 @@ export class StatusGraphCustomElement {
       },
       yaxis: {
         autotick: true,
+        rangemode: 'tozero',
         ticks: "outside",
         tick0: 0,
         ticklen: 8,
@@ -93,9 +94,6 @@ export class StatusGraphCustomElement {
     var $tab = $("status-graph");
     if ($tab.is(":visible") !== true) return; // skip update
 
-    var up = Math.random() * 1000;
-    var dw = Math.random() * 1000;
-
     if (this.dataUpload.x.length > this.currentMax) {
       this.dataUpload.y.shift();
       this.dataDownload.y.shift();
@@ -105,16 +103,21 @@ export class StatusGraphCustomElement {
 
     // when reducing the slider, help it discard old values
     if (this.dataUpload.x.length > this.currentMax) {
-      this.dataUpload.y.shift();
-      this.dataDownload.y.shift();
-      this.dataUpload.x.shift();
-      this.dataDownload.x.shift();
+      for( var i=0; i<(this.dataUpload.x.length - this.currentMax) / 2; i++ ) {
+        this.dataUpload.y.shift();
+        this.dataDownload.y.shift();
+        this.dataUpload.x.shift();
+        this.dataDownload.x.shift();
+      }
     }
 
     var now = (new Date).timeNow();
     this.dataUpload.x.push(now);
     this.dataDownload.x.push(now);
 
+    var up = this.dataUpload.y[0] + 200 * (0.5 + Math.random());
+    var dw = this.dataDownload.y[0] + 200 * (0.5 + Math.random());
+    
     this.dataUpload.y.push(up);
     this.dataDownload.y.push(up);
 

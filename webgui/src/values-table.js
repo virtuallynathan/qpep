@@ -16,8 +16,6 @@ export class ValuesTableCustomElement {
   }
 
   attached() {
-    log.info('#'+this.tableId);
-
     var $tab = $("statistics");
     if ($tab.is(":visible") !== true) return; // skip update
 

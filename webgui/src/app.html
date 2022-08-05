@@ -1,4 +1,7 @@
 <template>
+  <require from="./toast"></require>
+  <toast></toast>
+
   <!-- Simple header with fixed tabs. -->
   <div
     class="mdl-layout mdl-js-layout mdl-layout--fixed-header mdl-layout--fixed-tabs"
@@ -17,32 +20,10 @@
     </header>
 
     <main class="mdl-layout__content">
-      <require from="./status-graph"></require>
-      <require from="./statistics"></require>
+      <require from="./loader"></require>
+      <loader></loader>
 
-      <div class="lds-grid">
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-      </div>
-
-      <section class="mdl-layout__tab-panel" id="fixed-tab-status-graph">
-        <div class="page-content">
-          <status-graph></status-graph>
-        </div>
-      </section>
-
-      <section class="mdl-layout__tab-panel" id="fixed-tab-statistics">
-        <div class="page-content">
-          <statistics></statistics>
-        </div>
-      </section>
+      <router-view></router-view>
     </main>
 
     <footer class="mdl-mini-footer">
