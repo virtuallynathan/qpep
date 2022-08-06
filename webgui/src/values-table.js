@@ -4,6 +4,8 @@ export var log = LogManager.getLogger("values-tables");
 var $ = require("jquery");
 var DataTable = require("datatables.net-dt");
 
+import { showMessage } from "./actions";
+
 export class ValuesTableCustomElement {
   @bindable paragraph;
   @bindable tableId;
@@ -29,7 +31,10 @@ export class ValuesTableCustomElement {
       ajax: function (d, cb) {
         fetch(source)
           .then((response) => response.json())
-          .then((data) => cb(data));
+          .then((data) => cb(data))
+          .catch(error => {
+            showMessage( error, "error", 3000 );
+          });
       },
       columns: [{ data: "attribute" }, { data: "value" }],
     });

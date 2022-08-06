@@ -9,6 +9,7 @@ import { connectTo } from "aurelia-store";
 @connectTo()
 export class StatisticsCustomElement {
   isServer = true;
+  apiPort = 0;
   signaler = null;
 
   constructor(signaler) {
@@ -17,6 +18,7 @@ export class StatisticsCustomElement {
   
   stateChanged(newState, oldState) {
     this.isServer = (newState.mode == 'server');
+    this.apiPort = newState.port;
   }
 
 }

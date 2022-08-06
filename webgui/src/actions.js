@@ -23,7 +23,7 @@ function setHostModeAndPort(mode, port) {
     store.dispatch(Mutations.setHostModeAndPort, mode, port);
 }
 
-function showMessage(msg, type) {
+function showMessage(msg, type, timeout) {
     if( typeof(type) !== 'string') {
         throw 'It\'s required to pass valid value for type parameter';
     }
@@ -36,7 +36,11 @@ function showMessage(msg, type) {
             throw 'The only admitted values for type are \'info\' or \'error\'';
     }
 
-    store.dispatch(Mutations.showMessage, msg, type);
+    store.dispatch(Mutations.showMessage, msg, type, Math.max( 0, timeout ));
+}
+
+function clearMessage() {
+    store.dispatch(Mutations.clearMessage);
 }
 
 function showLoader() {
@@ -49,6 +53,7 @@ function hideLoader() {
 export {
     setHostModeAndPort,
     showMessage,
+    clearMessage,
     showLoader,
     hideLoader,
 }

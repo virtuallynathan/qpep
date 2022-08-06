@@ -21,7 +21,7 @@ export class App {
 
     config.map([
       {
-        route: ["", "home"],
+        route: ["", "index", "home"],
         name: "home",
         moduleId: PLATFORM.moduleName("home"),
       },
@@ -53,7 +53,7 @@ export class App {
       hideLoader();
     } catch (err) {
       log.error(err);
-      showMessage( err, "error" );
+      showMessage( err, "error", 0 );
 
       // disable tabs
       $(function () {

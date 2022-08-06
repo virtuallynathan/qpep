@@ -2,6 +2,8 @@ export var initialState = {
   mode: "none",
   port: 0,
   loaderShown: false,
-  msg: "<null>",
-  msgType: "info",
+
+  toast_msg: null,
+  toast_type: null,
+  toast_timeout: 0,
 };

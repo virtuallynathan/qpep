@@ -10,7 +10,7 @@
           id="server-select"
           paragraph="Client select"
           table-id="table-select"
-          source="testdata_server.json"
+          source="http://127.0.0.1:${apiPort}/statistics/hosts"
         ></values-table>
       </div>
       <div class="mdl-cell mdl-cell--8-col">
@@ -18,14 +18,14 @@
           id="server-info"
           paragraph="General info"
           table-id="table-info"
-          source="testdata_server.json"
+          source="http://127.0.0.1:${apiPort}/statistics/info/${selectedHostAddress}"
         ></values-table>
         <hr />
         <values-table
           id="server-stats"
           paragraph="Statistics"
           table-id="table-stats"
-          source="testdata_stats.json"
+          source="http://127.0.0.1:${apiPort}/statistics/data/${selectedHostAddress}"
         ></values-table>
       </div>
     </div>
@@ -39,7 +39,7 @@
           id="client-info"
           paragraph="General Info"
           table-id="table-info"
-          source="testdata_server.json"
+          source="http://127.0.0.1:${apiPort}/statistics/info"
         ></values-table>
       </div>
       <hr />
@@ -48,7 +48,7 @@
           id="client-stats"
           paragraph="Statistics"
           table-id="table-stats"
-          source="testdata_stats.json"
+          source="http://127.0.0.1:${apiPort}/statistics/data"
         ></values-table>
       </div>
     </div>
