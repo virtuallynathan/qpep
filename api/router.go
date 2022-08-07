@@ -14,19 +14,27 @@ import (
 )
 
 const (
-	API_ECHO_PATH   string = "/api/v1/echo"
-	API_STATUS_PATH string = "/api/v1/status/:addr"
+	API_PREFIX_SERVER string = "/api/v1/server"
+	API_PREFIX_CLIENT string = "/api/v1/client"
+
+	API_ECHO_PATH   string = "/echo"
+	API_STATUS_PATH string = "/status/:addr"
 )
 
-func RunAPIServer(ctx context.Context) {
+func RunAPIServer(ctx context.Context, clientMode bool) {
 	// update configuration from flags
 	host := shared.QuicConfiguration.ListenIP
+	if clientMode {
+		host = "127.0.0.1"
+		log.Printf("Ignored listening address for api server in client mode, forced to 127.0.0.1")
+	}
 	apiPort := shared.QuicConfiguration.GatewayAPIPort
 
 	listenAddr := fmt.Sprintf("%s:%d", host, apiPort)
 	log.Printf("Opening API Server on: %s", listenAddr)
 
 	rtr := NewRouter()
+	rtr.clientMode = clientMode
 	rtr.registerHandlers()
 	rtr.registerStaticFiles()
 
@@ -56,7 +64,7 @@ func NewRouter() *APIRouter {
 	}
 }
 
-func apiHeaders(next httprouter.Handle) httprouter.Handle {
+func apiFilter(next httprouter.Handle) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		log.Printf("0 %s\n", formatRequest(r))
 
@@ -86,14 +94,42 @@ func (r *APIRouter) registerHandlers() {
 	}
 	r.handler.NotFound = &notFoundHandler{}
 	r.handler.MethodNotAllowed = &methodsNotAllowedHandler{}
-
+	r.handler.RedirectTrailingSlash = false
 	r.handler.HandleMethodNotAllowed = true
-	r.handler.GET(API_ECHO_PATH, apiHeaders(apiEcho))
-	r.handler.GET(API_STATUS_PATH, apiHeaders(apiStatus))
+
+	// register apis with respective allowed usage
+	r.registerAPIMethod("GET", API_ECHO_PATH, apiFilter(apiEcho), true, true)
+	r.registerAPIMethod("GET", API_STATUS_PATH, apiFilter(apiStatus), true, false)
+}
+
+func (r *APIRouter) registerAPIMethod(method, path string, handle httprouter.Handle, allowServer, allowClient bool) {
+	if !allowServer && !allowClient {
+		panic(fmt.Sprintf("Requested registration of api method %s %s for neither server or client usage!", method, path))
+	}
+
+	log.Printf("Register API: %s %s (srv:%v cli:%v cli-mode:%v)\n", method, path, allowServer, allowClient, r.clientMode)
+	if allowServer && !r.clientMode {
+		r.handler.Handle(method, API_PREFIX_SERVER+path, handle)
+	} else {
+		r.handler.Handle(method, API_PREFIX_SERVER+path, apiForbidden)
+	}
+
+	if allowClient && r.clientMode {
+		r.handler.Handle(method, API_PREFIX_CLIENT+path, handle)
+	} else {
+		r.handler.Handle(method, API_PREFIX_CLIENT+path, apiForbidden)
+	}
+}
+
+func apiForbidden(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	w.WriteHeader(http.StatusForbidden)
 }
 
 func (r *APIRouter) registerStaticFiles() {
-	for path, _ := range webgui.FilesData {
+	r.handler.GET("/", redirectHome)
+	r.handler.GET("/index", redirectHome)
+
+	for path, _ := range webgui.FilesList {
 		r.handler.GET("/"+path, serveFile)
 	}
 }
@@ -104,5 +140,15 @@ func serveFile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	typeFile := mime.TypeByExtension(urlPath)
 	w.Header().Add("Content-Type", typeFile)
 
-	w.Write(webgui.FilesData[urlPath])
+	w.Write(webgui.FilesList[urlPath])
+}
+
+func redirectHome(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	query := r.URL.Query().Encode()
+
+	if len(query) > 0 {
+		http.Redirect(w, r, "/home?"+query, http.StatusPermanentRedirect)
+		return
+	}
+	http.Redirect(w, r, "/home", http.StatusPermanentRedirect)
 }

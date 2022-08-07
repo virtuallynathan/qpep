@@ -46,11 +46,14 @@ func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	mappedAddr := Statistics.GetMappedAddress(r.RemoteAddr)
-	log.Printf("remote: %s / mapped: %s\n", r.RemoteAddr, mappedAddr)
-	if len(mappedAddr) == 0 {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+	mappedAddr := r.RemoteAddr
+	if !strings.HasPrefix(r.RemoteAddr, "127.") {
+		mappedAddr = Statistics.GetMappedAddress(r.RemoteAddr)
+		log.Printf("remote: %s / mapped: %s\n", r.RemoteAddr, mappedAddr)
+		if len(mappedAddr) == 0 {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 	}
 
 	dataAddr := strings.Split(mappedAddr, ":")

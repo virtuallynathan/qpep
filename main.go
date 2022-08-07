@@ -40,6 +40,8 @@ func main() {
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
+	go api.RunAPIServer(execContext, shared.QuicConfiguration.ClientFlag)
+
 	if shared.QuicConfiguration.ClientFlag {
 		runAsClient(execContext)
 	} else {
@@ -87,5 +89,4 @@ func runAsClient(execContext context.Context) {
 func runAsServer(execContext context.Context) {
 	log.Println("Running Server")
 	go server.RunServer(execContext)
-	go api.RunAPIServer(execContext)
 }

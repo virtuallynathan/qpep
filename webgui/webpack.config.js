@@ -230,7 +230,7 @@ module.exports = ({ production }, { analyze, hmr, port, host }) => ({
         // available in index.ejs //
         baseUrl
       },
-      filename: 'index',
+      filename: 'home',
     }),
     // ref: https://webpack.js.org/plugins/mini-css-extract-plugin/
     new MiniCssExtractPlugin({ // updated to match the naming conventions for the js files

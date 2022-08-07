@@ -34,7 +34,7 @@ func getClientForAPI(localAddr net.Addr) *http.Client {
 }
 
 func RequestEcho(localAddress, address string, port int) *EchoResponse {
-	addr := fmt.Sprintf("http://%s:%d%s", address, port, API_ECHO_PATH)
+	addr := fmt.Sprintf("http://%s:%d%s", address, port, API_PREFIX_CLIENT+API_ECHO_PATH)
 
 	log.Printf("local: %s - %s\n", localAddress, net.ParseIP(localAddress))
 	client := getClientForAPI(&net.TCPAddr{
@@ -81,7 +81,7 @@ func RequestEcho(localAddress, address string, port int) *EchoResponse {
 }
 
 func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddress string) *StatusReponse {
-	apiPath := strings.Replace(API_STATUS_PATH, ":addr", publicAddress, -1)
+	apiPath := strings.Replace(API_PREFIX_CLIENT+API_STATUS_PATH, ":addr", publicAddress, -1)
 	addr := fmt.Sprintf("http://%s:%d%s", gatewayAddress, apiPort, apiPath)
 
 	client := getClientForAPI(&net.TCPAddr{

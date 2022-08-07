@@ -3,7 +3,8 @@ package api
 import "github.com/julienschmidt/httprouter"
 
 type APIRouter struct {
-	handler *httprouter.Router
+	handler    *httprouter.Router
+	clientMode bool
 }
 
 type EchoResponse struct {

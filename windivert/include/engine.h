@@ -1,6 +1,6 @@
 #pragma once
 
-#define FILTER_OUTBOUND "!impostor and tcp and tcp.DstPort!=%d"
+#define FILTER_OUTBOUND "!impostor and !loopback and tcp and tcp.DstPort!=%d"
 
 #define MAXBUF            WINDIVERT_MTU_MAX
 #define INET6_ADDRSTRLEN  45
