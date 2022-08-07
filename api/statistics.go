@@ -9,7 +9,8 @@ import (
 
 const (
 	TOTAL_CONNECTIONS string = "perf-total-connections"
-	QUIC_CONN         string = "perf-quic-from-%s"
+	QUIC_CONN         string = "perf-quic-from"
+	QUIC_HOSTS        string = "perf-host"
 )
 
 var Statistics = &statistics{}
@@ -24,6 +25,7 @@ type statistics struct {
 
 	counters        map[string]int
 	sourceToDestMap map[string]string
+	hosts           []string
 }
 
 func (s *statistics) init() {
@@ -33,6 +35,7 @@ func (s *statistics) init() {
 
 	s.semCounters = &sync.RWMutex{}
 	s.semAddressMap = &sync.RWMutex{}
+	s.hosts = make([]string, 0, 32)
 }
 
 func (s *statistics) Reset() {
@@ -45,9 +48,12 @@ func (s *statistics) Reset() {
 	s.sourceToDestMap = make(map[string]string)
 }
 
+func (s *statistics) AsKey(prefix string, values ...string) string {
+	return strings.ToLower(prefix + "-" + strings.Join(values, "-"))
+}
+
 // ---- Counters ---- //
 func (s *statistics) Get(key string) int {
-	key = strings.ToLower(strings.TrimSpace(key))
 	if len(key) == 0 {
 		return -1
 	}
@@ -67,7 +73,6 @@ func (s *statistics) Set(key string, value int) int {
 		panic(fmt.Sprintf("Will not track negative values: (%s: %d)", key, value))
 	}
 
-	key = strings.ToLower(strings.TrimSpace(key))
 	if len(key) == 0 {
 		return -1
 	}
@@ -80,8 +85,9 @@ func (s *statistics) Set(key string, value int) int {
 	return value
 }
 
-func (s *statistics) Increment(key string) int {
-	key = strings.ToLower(strings.TrimSpace(key))
+func (s *statistics) Increment(prefix string, keyparts ...string) int {
+
+	key := s.AsKey(prefix, keyparts...)
 	if len(key) == 0 {
 		log.Printf("counter: %s = -1\n", key)
 		return -1
@@ -103,8 +109,8 @@ func (s *statistics) Increment(key string) int {
 	return value + 1
 }
 
-func (s *statistics) Decrement(key string) int {
-	key = strings.ToLower(strings.TrimSpace(key))
+func (s *statistics) Decrement(prefix string, keyparts ...string) int {
+	key := s.AsKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return -1
 	}
@@ -141,6 +147,9 @@ func (s *statistics) SetMappedAddress(source string, dest string) {
 	s.semAddressMap.Lock()
 	defer s.semAddressMap.Unlock()
 
+	if _, ok := s.sourceToDestMap[source]; !ok {
+		s.hosts = append(s.hosts, dest)
+	}
 	s.sourceToDestMap[source] = dest
 }
 
@@ -149,5 +158,24 @@ func (s *statistics) DeleteMappedAddress(source string) {
 	s.semAddressMap.Lock()
 	defer s.semAddressMap.Unlock()
 
+	if _, ok := s.sourceToDestMap[source]; ok {
+		mapped := s.sourceToDestMap[source]
+		for i := 0; i < len(s.hosts); i++ {
+			if !strings.EqualFold(s.hosts[i], mapped) {
+				continue
+			}
+			s.hosts = append(s.hosts[:i], s.hosts[i+1:]...)
+			break
+		}
+	}
 	delete(s.sourceToDestMap, source)
+}
+
+// ---- hosts ---- //
+func (s *statistics) GetHosts() []string {
+	s.init()
+	s.semAddressMap.RLock()
+	defer s.semAddressMap.RUnlock()
+
+	return append([]string{}, s.hosts...)
 }

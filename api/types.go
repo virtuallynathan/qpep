@@ -8,11 +8,20 @@ type APIRouter struct {
 }
 
 type EchoResponse struct {
-	Address string `json:"Address"`
-	Port    int64  `json:"Port"`
+	Address string `json:"address"`
+	Port    int64  `json:"port"`
 }
 
 type StatusReponse struct {
-	LastCheck         string `json:"LastCheck"`
-	ConnectionCounter int    `json:"ConnectionCounter"`
+	LastCheck         string `json:"lastcheck"`
+	ConnectionCounter int    `json:"connection_counter"`
+}
+
+type StatsInfoRow struct {
+	ID        int    `json:"id"`
+	Attribute string `json:"attribute"`
+	Value     string `json:"value"`
+}
+type StatsInfoReponse struct {
+	Data []StatsInfoRow `json:"data"`
 }

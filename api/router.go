@@ -17,8 +17,11 @@ const (
 	API_PREFIX_SERVER string = "/api/v1/server"
 	API_PREFIX_CLIENT string = "/api/v1/client"
 
-	API_ECHO_PATH   string = "/echo"
-	API_STATUS_PATH string = "/status/:addr"
+	API_ECHO_PATH        string = "/echo"
+	API_STATUS_PATH      string = "/status/:addr"
+	API_STATS_HOSTS_PATH string = "/statistics/hosts"
+	API_STATS_INFO_PATH  string = "/statistics/info"
+	API_STATS_DATA_PATH  string = "/statistics/data"
 )
 
 func RunAPIServer(ctx context.Context, clientMode bool) {
@@ -66,7 +69,7 @@ func NewRouter() *APIRouter {
 
 func apiFilter(next httprouter.Handle) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		log.Printf("0 %s\n", formatRequest(r))
+		log.Printf("%s\n", formatRequest(r))
 
 		w.Header().Add("Content-Type", "application/json")
 		next(w, r, ps)
@@ -76,20 +79,20 @@ func apiFilter(next httprouter.Handle) httprouter.Handle {
 type notFoundHandler struct{}
 
 func (n *notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("1 %s\n", formatRequest(r))
+	log.Printf("%s\n", formatRequest(r))
 	w.WriteHeader(http.StatusNotFound)
 }
 
 type methodsNotAllowedHandler struct{}
 
 func (n *methodsNotAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("2 %s\n", formatRequest(r))
+	log.Printf("%s\n", formatRequest(r))
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
 func (r *APIRouter) registerHandlers() {
 	r.handler.PanicHandler = func(w http.ResponseWriter, r *http.Request, i interface{}) {
-		log.Printf("3 %s\n", formatRequest(r))
+		log.Printf("%s\n", formatRequest(r))
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	r.handler.NotFound = &notFoundHandler{}
@@ -100,6 +103,10 @@ func (r *APIRouter) registerHandlers() {
 	// register apis with respective allowed usage
 	r.registerAPIMethod("GET", API_ECHO_PATH, apiFilter(apiEcho), true, true)
 	r.registerAPIMethod("GET", API_STATUS_PATH, apiFilter(apiStatus), true, false)
+
+	r.registerAPIMethod("GET", API_STATS_HOSTS_PATH, apiFilter(apiStatisticsHosts), true, false)
+	r.registerAPIMethod("GET", API_STATS_INFO_PATH, apiFilter(apiStatisticsClientInfo), false, true)
+	r.registerAPIMethod("GET", API_STATS_DATA_PATH, apiFilter(apiStatisticsClientData), false, true)
 }
 
 func (r *APIRouter) registerAPIMethod(method, path string, handle httprouter.Handle, allowServer, allowClient bool) {
@@ -122,6 +129,8 @@ func (r *APIRouter) registerAPIMethod(method, path string, handle httprouter.Han
 }
 
 func apiForbidden(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	log.Printf("%s\n", formatRequest(r))
+
 	w.WriteHeader(http.StatusForbidden)
 }
 

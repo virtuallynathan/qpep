@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -152,13 +151,12 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	log.Printf("Opened TCP Conn %s -> %s\n", qpepHeader.SourceAddr, qpepHeader.DestAddr)
 
 	trackedAddress := qpepHeader.SourceAddr.IP.String()
-	trackedAddressKey := fmt.Sprintf(api.QUIC_CONN, qpepHeader.SourceAddr.IP.String())
 	proxyAddress := tcpConn.(*net.TCPConn).LocalAddr().String()
 
 	api.Statistics.Increment(api.TOTAL_CONNECTIONS)
-	api.Statistics.Increment(trackedAddressKey)
+	api.Statistics.Increment(api.QUIC_CONN, trackedAddress)
 	defer func() {
-		api.Statistics.Decrement(trackedAddressKey)
+		api.Statistics.Decrement(api.QUIC_CONN, trackedAddress)
 		api.Statistics.Decrement(api.TOTAL_CONNECTIONS)
 	}()
 

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -23,12 +24,13 @@ func formatRequest(r *http.Request) string {
 	return string(data)
 }
 
+// path /status
 func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var counter int = -1
 	addr := ps.ByName("addr")
 
 	if len(addr) > 0 {
-		key := fmt.Sprintf(QUIC_CONN, addr)
+		key := Statistics.AsKey(QUIC_CONN, addr)
 		counter = Statistics.Get(key)
 	}
 
@@ -45,6 +47,7 @@ func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	_, _ = w.Write(data)
 }
 
+// path /echo
 func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	mappedAddr := r.RemoteAddr
 	if !strings.HasPrefix(r.RemoteAddr, "127.") {
@@ -76,6 +79,62 @@ func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		Address: dataAddr[0],
 		Port:    port,
 	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+// path /statistics/hosts
+func apiStatisticsHosts(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	data, err := json.Marshal(Statistics.GetHosts())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+// path /statistics/info
+func apiStatisticsClientInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	info := StatsInfoReponse{}
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        1,
+		Attribute: "Address",
+		Value:     shared.QuicConfiguration.ListenIP,
+	})
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        2,
+		Attribute: "Last Update",
+		Value:     time.Now().Format(time.RFC1123Z),
+	})
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        3,
+		Attribute: "Platform",
+		Value:     runtime.GOOS,
+	})
+
+	data, err := json.Marshal(info)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+// path /statistics/data
+func apiStatisticsClientData(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	info := StatsInfoReponse{}
+	info.Data = make([]StatsInfoRow, 0)
+
+	data, err := json.Marshal(info)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
