@@ -177,5 +177,7 @@ func (s *statistics) GetHosts() []string {
 	s.semAddressMap.RLock()
 	defer s.semAddressMap.RUnlock()
 
-	return append([]string{}, s.hosts...)
+	v := append([]string{}, "127.0.0.1") // for test
+	v = append(v, s.hosts...)
+	return v
 }

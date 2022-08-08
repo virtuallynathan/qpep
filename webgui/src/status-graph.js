@@ -1,6 +1,10 @@
 import { LogManager } from "aurelia-framework";
 export var log = LogManager.getLogger("graph");
 
+import { showMessage } from "./actions";
+
+import { connectTo } from "aurelia-store";
+
 var $ = require("jquery");
 
 Date.prototype.timeNow = function () {
@@ -16,12 +20,14 @@ Date.prototype.timeNow = function () {
   );
 };
 
+@connectTo()
 export class StatusGraphCustomElement {
-  constructor() {
-    var now = (new Date).timeNow();
+  constructor(signaler) {
+    var now = new Date().timeNow();
 
     this.currentMax = 60;
-    this.source = '';
+    this.source = "";
+    this.apiPort;
 
     this.dataUpload = {
       x: [now],
@@ -63,7 +69,7 @@ export class StatusGraphCustomElement {
       },
       yaxis: {
         autotick: true,
-        rangemode: 'tozero',
+        rangemode: "tozero",
         ticks: "outside",
         tick0: 0,
         ticklen: 8,
@@ -77,7 +83,7 @@ export class StatusGraphCustomElement {
       },
     };
 
-    this.updateDataTimer = setInterval(() => this.periodicDataUpdate(), 1000);
+    this.updateDataTimer = setInterval(() => this.periodicDataUpdate(), 1100);
   }
 
   attached() {
@@ -95,32 +101,61 @@ export class StatusGraphCustomElement {
     var $tab = $("status-graph");
     if ($tab.is(":visible") !== true) return; // skip update
 
-    var up = this.dataUpload.y[0] + 200 * (0.5 + Math.random());
-    var dw = this.dataDownload.y[0] + 200 * (0.5 + Math.random());
-
     fetch(this.source)
-      //.then((response) => response.json())
-      .then((data) => {
+      .then((response) => {
+        if (!response.ok) {
+          showMessage(`HTTP Error Status: ${response.status}`, "error", 1000);
+          return cb({
+            data: [],
+          });
+        }
+
+        return response.json();
+      })
+      .then((obj) => {
+        var up = null;
+        var dw = null;
+        log.info(obj);
+        obj = obj.data;
+
+        for (var i = 0; i < obj.length; i++) {
+          if (obj[i].attribute == "Current Download Speed") {
+            dw = ~~obj[i].value;
+            log.info("dw", dw);
+          }
+          if (obj[i].attribute == "Current Upload Speed") {
+            up = ~~obj[i].value;
+            log.info("up", up);
+          }
+        }
+
         this.periodicGraphUpdate({
-          upload: up,
-          download: dw,
+          upload: up !== null ? up : 0,
+          download: dw !== null ? dw : 0,
+        });
+      })
+      .catch((error) => {
+        showMessage(error, "error", 1000);
+        this.periodicGraphUpdate({
+          upload: 0,
+          download: 0,
         });
       });
-  }
+}
 
   periodicGraphUpdate(data) {
-    var now = (new Date).timeNow();
+    var now = new Date().timeNow();
     var up = data.upload;
     var dw = data.download;
 
     // ensure the data is valid
-    if( up === undefined || up === null || dw === undefined || up === undefined )
+    if (up === undefined || up === null || dw === undefined || up === undefined)
       return;
 
     // discard old values
-    var currMax = Math.max( 1, (this.dataUpload.x.length - this.currentMax) / 2 );
+    /*var currMax = Math.max(1, (this.dataUpload.x.length - this.currentMax) / 2);
     if (this.dataUpload.x.length > this.currentMax) {
-      for( var i=0; i<currMax; i++ ) {
+      for (var i = 0; i < currMax; i++) {
         this.dataUpload.y.shift();
         this.dataDownload.y.shift();
         this.dataUpload.x.shift();
@@ -128,19 +163,24 @@ export class StatusGraphCustomElement {
       }
     }
 
-    this.dataUpload.x.push( now );
-    this.dataDownload.x.push( now );
+    this.dataUpload.x.push(now);
+    this.dataDownload.x.push(now);
 
-    this.dataUpload.y.push( up );
-    this.dataDownload.y.push( dw );
+    this.dataUpload.y.push(up);
+    this.dataDownload.y.push(dw);*/
 
     Plotly.extendTraces(
       this.gd,
       {
-        y: [ [up], [dw] ],
+        x: [[now], [now]],
+        y: [[up], [dw]],
       },
       [0, 1]
     );
   }
 
+  stateChanged(newState, oldState) {
+    this.apiPort = newState.port;
+    this.source = `http://127.0.0.1:${this.apiPort}/api/v1/client/statistics/data`;
+  }
 }

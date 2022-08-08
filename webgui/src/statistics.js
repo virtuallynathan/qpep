@@ -32,11 +32,11 @@ export class StatisticsCustomElement {
   }
   @computedFrom('apiPort', 'selectedHostAddress')
   get serverGeneralInfo(){
-    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/${this.selectedHostAddress}/info`;
+    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/info/${this.selectedHostAddress}`;
   }
   @computedFrom('apiPort', 'selectedHostAddress')
   get serverStatisticsData(){
-    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/${this.selectedHostAddress}/data`;
+    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/data/${this.selectedHostAddress}`;
   }
 
   @computedFrom('apiPort')

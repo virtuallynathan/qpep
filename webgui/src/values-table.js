@@ -27,12 +27,12 @@ export class ValuesTableCustomElement {
 
   attached() {
     this.queue.queueMicroTask(() => {
-      if( !this.shown || this.prevSource == this.source ) {
-        return
+      if (!this.shown || this.prevSource == this.source) {
+        return;
       }
       this.prevSource = this.source;
 
-      clearInterval( this.update );
+      clearInterval(this.update);
       this.table.destroy();
 
       this.initGraph();
@@ -42,8 +42,7 @@ export class ValuesTableCustomElement {
   }
 
   initGraph() {
-    if( !this.shown )
-      return;
+    if (!this.shown) return;
 
     var source = this.source;
 
@@ -52,9 +51,25 @@ export class ValuesTableCustomElement {
       search: true,
       ordering: false,
       info: false,
+      language: {
+        emptyTable: "",
+      },
       ajax: function (d, cb) {
-        fetch(source)
-          .then((response) => response.json())
+          fetch(source, {
+            headers: new Headers({
+              Accept: "application/json",
+            }),
+          })
+          .then((response) => {
+            if (!response.ok) {
+              showMessage(`HTTP Error Status: ${response.status}`, "error", 3000);
+              return cb({
+                data: []
+              });
+            }
+
+            return response.json();
+          })
           .then((data) => cb(data))
           .catch((error) => {
             showMessage(error, "error", 3000);
@@ -72,5 +87,4 @@ export class ValuesTableCustomElement {
       table.ajax.reload();
     }, 3000);
   }
-
 }

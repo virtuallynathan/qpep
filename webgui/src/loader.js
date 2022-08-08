@@ -1,5 +1,5 @@
 import { LogManager } from "aurelia-framework";
-export var log = LogManager.getLogger("qpep");
+export var log = LogManager.getLogger("loader");
 
 import { connectTo } from "aurelia-store";
 
@@ -24,13 +24,14 @@ export class LoaderCustomElement {
 
   hide() {
     setTimeout(() => {
-      $(".lds").fadeOut(1000, "linear", () => {
-        var $activeTab = $(".is-active");
-        if (!$activeTab.exists()) {
-          $("#fixed-tab-status-graph").addClass("is-active");
-          $("#fixed-tab-status-graph > span").trigger("click");
-        }
-      });
+      var $activeTab = $(".is-active");
+      if (!$activeTab.exists()) {
+        //$("#fixed-tab-status-graph").addClass("is-active");
+        //$("#fixed-tab-status-graph > span").trigger("click");
+        $("#fixed-tab-statistics").addClass("is-active");
+        $("#fixed-tab-statistics > span").trigger("click");
+      }
+      $(".lds").fadeOut(1000, "linear");
     }, 2000);
   }
 }

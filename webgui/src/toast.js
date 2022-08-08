@@ -58,15 +58,19 @@ export class Toast {
       if (this.timeout > 0) {
         // other errors / info, with normal timeout no reload
         setTimeout(() => {
-          clearMessage();
-
-          this.msg = "";
-          this.type = 'info';
           this.shown = false;
           this.shownClass = 'toast-hidden';
           
           this.signaler.signal("update");
         }, this.timeout);
+
+        // this is to workaround the bad hide behavior
+        setTimeout(() => {
+          this.msg = "";
+          this.type = 'info';
+          
+          this.signaler.signal("update");
+        }, this.timeout + 1000 );
 
         return;
       }

@@ -40,12 +40,13 @@ func main() {
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
-	go api.RunAPIServer(execContext, shared.QuicConfiguration.ClientFlag)
+	go api.RunAPIServer(execContext, true) // api server for local webgui
 
 	if shared.QuicConfiguration.ClientFlag {
 		runAsClient(execContext)
 	} else {
 		runAsServer(execContext)
+		go api.RunAPIServer(execContext, false) // public api server for remote clients
 	}
 
 	interruptListener := make(chan os.Signal)

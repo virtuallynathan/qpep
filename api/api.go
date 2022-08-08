@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -90,7 +92,19 @@ func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // path /statistics/hosts
 func apiStatisticsHosts(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	data, err := json.Marshal(Statistics.GetHosts())
+	info := StatsInfoReponse{}
+	hosts := Statistics.GetHosts()
+
+	sort.Strings(hosts)
+	for i := 0; i < len(hosts); i++ {
+		info.Data = append(info.Data, StatsInfoRow{
+			ID:        i + 1,
+			Attribute: "Address",
+			Value:     hosts[i],
+		})
+	}
+
+	data, err := json.Marshal(info)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -100,23 +114,33 @@ func apiStatisticsHosts(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	_, _ = w.Write(data)
 }
 
-// path /statistics/info
-func apiStatisticsClientInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// path /statistics/info, /statistics/:addr/info
+func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	info := StatsInfoReponse{}
+	reqAddress := ps.ByName("addr")
+
+	tm := time.Now().Format(time.RFC1123Z)
+	address := shared.QuicConfiguration.ListenIP
+	platform := runtime.GOOS
+	if len(reqAddress) > 0 {
+		address = reqAddress
+		//platform =
+	}
+
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        1,
 		Attribute: "Address",
-		Value:     shared.QuicConfiguration.ListenIP,
+		Value:     address,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        2,
 		Attribute: "Last Update",
-		Value:     time.Now().Format(time.RFC1123Z),
+		Value:     tm,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        3,
 		Attribute: "Platform",
-		Value:     runtime.GOOS,
+		Value:     platform,
 	})
 
 	data, err := json.Marshal(info)
@@ -129,10 +153,27 @@ func apiStatisticsClientInfo(w http.ResponseWriter, r *http.Request, ps httprout
 	_, _ = w.Write(data)
 }
 
-// path /statistics/data
-func apiStatisticsClientData(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// path /statistics/data , /statistics/:addr/data
+func apiStatisticsData(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	//reqAddress := ps.ByName("addr")
+
 	info := StatsInfoReponse{}
-	info.Data = make([]StatsInfoRow, 0)
+	info.Data = make([]StatsInfoRow, 0, 32)
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        1,
+		Attribute: "Current Connections",
+		Value:     strconv.Itoa(rand.Intn(20)),
+	})
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        2,
+		Attribute: "Current Download Speed",
+		Value:     fmt.Sprintf("%.2f", rand.Float64()*1000.0),
+	})
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        3,
+		Attribute: "Current Upload Speed",
+		Value:     fmt.Sprintf("%.2f", rand.Float64()*1000.0),
+	})
 
 	data, err := json.Marshal(info)
 	if err != nil {
