@@ -228,9 +228,8 @@ module.exports = ({ production }, { analyze, hmr, port, host }) => ({
       template: 'index.ejs',
       metadata: {
         // available in index.ejs //
-        baseUrl
+        baseUrl,
       },
-      filename: 'home',
     }),
     // ref: https://webpack.js.org/plugins/mini-css-extract-plugin/
     new MiniCssExtractPlugin({ // updated to match the naming conventions for the js files

@@ -2,7 +2,7 @@
   <require from="datatables.net-dt/css/jquery.dataTables.css"></require>
   <require from="./values-table"></require>
 
-  <div id="server-side" if.bind="isServer">
+  <div id="server-side" if.bind="serverIsShown & signal:'update'">
 
     <div class="mdl-grid">
       <div class="mdl-cell mdl-cell--4-col">
@@ -10,7 +10,8 @@
           id="server-select"
           paragraph="Client select"
           table-id="table-select"
-          source="http://127.0.0.1:${apiPort}/server/statistics/hosts"
+          source.bind="serverSourceSelect"
+          shown.bind="serverIsShown & signal:'update'"
         ></values-table>
       </div>
       <div class="mdl-cell mdl-cell--8-col">
@@ -18,20 +19,22 @@
           id="server-info"
           paragraph="General info"
           table-id="table-info"
-          source="http://127.0.0.1:${apiPort}/server/statistics/${selectedHostAddress}/info"
+          source.bind="serverGeneralInfo"
+          shown.bind="serverIsShown & signal:'update'"
         ></values-table>
         <hr />
         <values-table
           id="server-stats"
           paragraph="Statistics"
           table-id="table-stats"
-          source="http://127.0.0.1:${apiPort}/server/statistics/${selectedHostAddress}/data"
+          source.bind="serverStatisticsData"
+          shown.bind="serverIsShown & signal:'update'"
         ></values-table>
       </div>
     </div>
 
   </div>
-  <div else id="client-side">
+  <div id="client-side" if.bind="clientIsShown & signal:'update'">
 
     <div class="mdl-grid">
       <div class="mdl-cell mdl-cell--4-col">
@@ -39,7 +42,8 @@
           id="client-info"
           paragraph="General Info"
           table-id="table-info"
-          source="http://127.0.0.1:${apiPort}/client/statistics/info"
+          source.bind="clientGeneralInfo"
+          shown.bind="clientIsShown & signal:'update'"
         ></values-table>
       </div>
       <hr />
@@ -48,7 +52,8 @@
           id="client-stats"
           paragraph="Statistics"
           table-id="table-stats"
-          source="http://127.0.0.1:${apiPort}/client/statistics/data"
+          source.bind="clientStatisticsData"
+          shown.bind="clientIsShown & signal:'update'"
         ></values-table>
       </div>
     </div>

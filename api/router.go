@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"path/filepath"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/parvit/qpep/shared"
@@ -80,7 +81,7 @@ type notFoundHandler struct{}
 
 func (n *notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s\n", formatRequest(r))
-	w.WriteHeader(http.StatusNotFound)
+	serveFile(w, r, nil)
 }
 
 type methodsNotAllowedHandler struct{}
@@ -135,29 +136,28 @@ func apiForbidden(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 }
 
 func (r *APIRouter) registerStaticFiles() {
-	r.handler.GET("/", redirectHome)
-	r.handler.GET("/index", redirectHome)
-
 	for path, _ := range webgui.FilesList {
+		if path == "index.html" {
+			continue
+		}
 		r.handler.GET("/"+path, serveFile)
 	}
 }
 
 func serveFile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	urlPath := r.URL.Path[1:]
+	if _, ok := webgui.FilesList[urlPath]; !ok {
+		urlPath = "index.html"
+	}
 
-	typeFile := mime.TypeByExtension(urlPath)
+	var typeFile string
+	if len(filepath.Ext(urlPath)) == 0 {
+		typeFile = "text/html"
+	} else {
+		typeFile = mime.TypeByExtension(urlPath)
+	}
+
 	w.Header().Add("Content-Type", typeFile)
 
 	w.Write(webgui.FilesList[urlPath])
-}
-
-func redirectHome(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	query := r.URL.Query().Encode()
-
-	if len(query) > 0 {
-		http.Redirect(w, r, "/home?"+query, http.StatusPermanentRedirect)
-		return
-	}
-	http.Redirect(w, r, "/home", http.StatusPermanentRedirect)
 }
