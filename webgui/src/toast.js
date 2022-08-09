@@ -23,25 +23,18 @@ export class Toast {
   }
 
   stateChanged(newState, oldState) {
-    if (
-      oldState !== undefined &&
-      newState.toast_msg !== null &&
-      newState.toast_msg !== this.msg
-    ) {
-      if (this.shown) {
-        log.error(
-          "Error was ignored because another error notification is already shown: ",
-          newState.toast_msg
-        );
-        return;
-      }
-      log.info("newstate: ", newState);
-      this.show(
-        newState.toast_msg,
-        newState.toast_type,
-        newState.toast_timeout
-      );
+    if (oldState === undefined || newState.toast_msg === null) {
+      return;
     }
+    if (this.shown) {
+      log.error(
+        "Error was ignored because another error notification is already shown: ",
+        newState.toast_msg
+      );
+      return;
+    }
+    log.info("newstate: ", newState);
+    this.show(newState.toast_msg, newState.toast_type, newState.toast_timeout);
   }
 
   show(msg, type, timeout) {
@@ -59,18 +52,10 @@ export class Toast {
         // other errors / info, with normal timeout no reload
         setTimeout(() => {
           this.shown = false;
-          this.shownClass = 'toast-hidden';
-          
+          this.shownClass = "toast-hidden";
+
           this.signaler.signal("update");
         }, this.timeout);
-
-        // this is to workaround the bad hide behavior
-        setTimeout(() => {
-          this.msg = "";
-          this.type = 'info';
-          
-          this.signaler.signal("update");
-        }, this.timeout + 1000 );
 
         return;
       }

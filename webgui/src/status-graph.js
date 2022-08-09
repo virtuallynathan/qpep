@@ -36,8 +36,7 @@ export class StatusGraphCustomElement {
       name: "upload",
       line: {
         color: "rgb(219, 64, 82)",
-        width: 1,
-        shape: "spline",
+        width: 2,
       },
     };
     this.dataDownload = {
@@ -47,8 +46,7 @@ export class StatusGraphCustomElement {
       name: "download",
       line: {
         color: "rgb(55, 128, 191)",
-        width: 1,
-        shape: "spline",
+        width: 2,
       },
     };
     this.layout = {
@@ -141,7 +139,7 @@ export class StatusGraphCustomElement {
           download: 0,
         });
       });
-}
+  }
 
   periodicGraphUpdate(data) {
     var now = new Date().timeNow();
@@ -152,23 +150,6 @@ export class StatusGraphCustomElement {
     if (up === undefined || up === null || dw === undefined || up === undefined)
       return;
 
-    // discard old values
-    /*var currMax = Math.max(1, (this.dataUpload.x.length - this.currentMax) / 2);
-    if (this.dataUpload.x.length > this.currentMax) {
-      for (var i = 0; i < currMax; i++) {
-        this.dataUpload.y.shift();
-        this.dataDownload.y.shift();
-        this.dataUpload.x.shift();
-        this.dataDownload.x.shift();
-      }
-    }
-
-    this.dataUpload.x.push(now);
-    this.dataDownload.x.push(now);
-
-    this.dataUpload.y.push(up);
-    this.dataDownload.y.push(dw);*/
-
     Plotly.extendTraces(
       this.gd,
       {
@@ -177,6 +158,12 @@ export class StatusGraphCustomElement {
       },
       [0, 1]
     );
+
+    // scales plot x range to only last seconds (via the slider value)
+    var update = {
+      "xaxis.range": [this.dataUpload.x.length - this.currentMax, this.dataUpload.x.length], // updates the xaxis range
+    };
+    Plotly.relayout(this.gd, update);
   }
 
   stateChanged(newState, oldState) {
