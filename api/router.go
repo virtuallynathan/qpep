@@ -167,9 +167,9 @@ func apiForbidden(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 }
 
 func (r *APIRouter) registerStaticFiles() {
-	for path, _ := range webgui.FilesList {
+	for path := range webgui.FilesList {
 		if path == "index.html" {
-			continue
+			continue // needs to be handled with a 404 to support the spa push state router
 		}
 		r.handler.GET("/"+path, serveFile)
 	}

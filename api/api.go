@@ -74,7 +74,6 @@ func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		break
 	case 2:
 		port, _ = strconv.ParseInt(dataAddr[1], 10, 64)
-		break
 	}
 
 	data, err := json.Marshal(EchoResponse{

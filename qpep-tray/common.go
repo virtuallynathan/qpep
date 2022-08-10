@@ -55,6 +55,7 @@ func onReady() {
 	systray.SetTitle("QPep TCP accelerator")
 	systray.SetTooltip("QPep TCP accelerator")
 
+	mStatus := systray.AddMenuItem("Status Interface", "Open the status web gui")
 	mConfig := systray.AddMenuItem("Edit Configuration", "Open configuration for next client / server executions")
 	mConfigRefresh := systray.AddMenuItem("Reload Configuration", "Reload configuration from disk and restart the service")
 	systray.AddSeparator()
@@ -65,6 +66,7 @@ func onReady() {
 
 	// Sets the icon of the menu items
 	mQuit.SetIcon(icons.ExitIconData)
+	mStatus.SetIcon(icons.ConfigIconData)
 	mConfig.SetIcon(icons.ConfigIconData)
 	mConfigRefresh.SetIcon(icons.RefreshIconData)
 
@@ -88,6 +90,10 @@ func onReady() {
 			select {
 			case <-mConfig.ClickedCh:
 				openConfigurationWithOSEditor()
+				continue
+
+			case <-mStatus.ClickedCh:
+				openWebguiWithOSBrowser(mClientActive, mServerActive)
 				continue
 
 			case <-mConfigRefresh.ClickedCh:

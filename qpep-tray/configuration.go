@@ -19,6 +19,7 @@ import (
 const (
 	CONFIGFILENAME = "qpep-tray.yml"
 	CONFIGPATH     = "qpep-tray"
+	WEBGUIURL      = "http://127.0.0.1:%d/index?mode=%s&port=%d"
 	DEFAULTCONFIG  = `acks: 10
 ackDelay: 25
 congestion: 4
@@ -110,6 +111,27 @@ func openConfigurationWithOSEditor() {
 
 	if err := open.Run(confdir); err != nil {
 		ErrorMsg("Editor configuration failed with error: %v", err)
+		return
+	}
+}
+
+func openWebguiWithOSBrowser(clientMode, serverMode bool) {
+	mode := "server"
+	port := qpepConfig.GatewayAPIPort
+	if (clientMode && serverMode) || (!clientMode && !serverMode) {
+		ErrorMsg("Webgui can start with just one mode between server and client!")
+		return
+	}
+	if clientMode {
+		mode = "client"
+	}
+	if serverMode {
+		mode = "server"
+	}
+
+	guiurl := fmt.Sprintf(WEBGUIURL, port, mode, port)
+	if err := open.Run(guiurl); err != nil {
+		ErrorMsg("Webgui startup failed with error: %v", err)
 		return
 	}
 }
