@@ -7,6 +7,11 @@ function setHostModeAndPort(state, mode, port) {
   return newState;
 }
 
+function setServerSelectedAddress(state, address) {
+  const newState = Object.assign({}, state, { selected_host: address });
+  return newState;
+}
+
 function showMessage(state, text, type, timeout) {
   const newState = Object.assign({}, state, {
     toast_msg: text, 
@@ -35,9 +40,10 @@ function hideLoader(state) {
 }
 
 store.registerAction("setHostModeAndPort", setHostModeAndPort);
+store.registerAction("setServerSelectedAddress", setServerSelectedAddress);
 store.registerAction("showMessage", showMessage);
 store.registerAction("clearMessage", clearMessage);
 store.registerAction("showLoader", showLoader);
 store.registerAction("hideLoader", hideLoader);
 
-export { setHostModeAndPort, showMessage, clearMessage, showLoader, hideLoader };
+export { setHostModeAndPort, setServerSelectedAddress, showMessage, clearMessage, showLoader, hideLoader };

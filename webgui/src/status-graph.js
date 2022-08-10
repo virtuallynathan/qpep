@@ -27,7 +27,8 @@ export class StatusGraphCustomElement {
 
     this.currentMax = 60;
     this.source = "";
-    this.apiPort;
+    this.apiPort = 444;
+    this.failed = false;
 
     this.dataUpload = {
       x: [now],
@@ -108,6 +109,8 @@ export class StatusGraphCustomElement {
           });
         }
 
+        this.failed = false;
+
         return response.json();
       })
       .then((obj) => {
@@ -133,7 +136,10 @@ export class StatusGraphCustomElement {
         });
       })
       .catch((error) => {
-        showMessage(error, "error", 1000);
+        if (!this.failed) {
+          showMessage(error, "error", 1000);
+          this.failed = true;
+        }
         this.periodicGraphUpdate({
           upload: 0,
           download: 0,
@@ -168,6 +174,6 @@ export class StatusGraphCustomElement {
 
   stateChanged(newState, oldState) {
     this.apiPort = newState.port;
-    this.source = `http://127.0.0.1:${this.apiPort}/api/v1/client/statistics/data`;
+    this.source = `http://127.0.0.1:${newState.port}/api/v1/${newState.mode}/statistics/data`;
   }
 }

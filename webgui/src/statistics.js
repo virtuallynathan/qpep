@@ -12,7 +12,7 @@ export class StatisticsCustomElement {
   isClient = false;
   apiPort = 0;
   signaler = null;
-  selectedHostAddress = 'localhost';
+  selectedHost = '';
 
   constructor(signaler) {
     this.signaler = signaler;
@@ -22,6 +22,7 @@ export class StatisticsCustomElement {
     this.isServer = (newState.mode == 'server');
     this.isClient = (newState.mode == 'client');
     this.apiPort = newState.port;
+    this.selectedHost = newState.selected_host;
     
     this.signaler.signal("update");
   }
@@ -30,13 +31,13 @@ export class StatisticsCustomElement {
   get serverSourceSelect(){
     return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/hosts`;
   }
-  @computedFrom('apiPort', 'selectedHostAddress')
+  @computedFrom('apiPort', 'selectedHost')
   get serverGeneralInfo(){
-    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/info/${this.selectedHostAddress}`;
+    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/info/${this.selectedHost}`;
   }
-  @computedFrom('apiPort', 'selectedHostAddress')
+  @computedFrom('apiPort', 'selectedHost')
   get serverStatisticsData(){
-    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/data/${this.selectedHostAddress}`;
+    return `http://127.0.0.1:${this.apiPort}/api/v1/server/statistics/data/${this.selectedHost}`;
   }
 
   @computedFrom('apiPort')
@@ -56,5 +57,4 @@ export class StatisticsCustomElement {
   get clientIsShown() {
     return this.isClient;
   }
-  
 }

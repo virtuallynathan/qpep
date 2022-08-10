@@ -10,6 +10,7 @@
           id="server-select"
           paragraph="Client select"
           table-id="table-select"
+          update-select="true"
           source.bind="serverSourceSelect"
           shown.bind="serverIsShown & signal:'update'"
         ></values-table>
@@ -19,7 +20,8 @@
           id="server-info"
           paragraph="General info"
           table-id="table-info"
-          source.bind="serverGeneralInfo"
+          update-select="false"
+          source.bind="serverGeneralInfo & signal:'update'"
           shown.bind="serverIsShown & signal:'update'"
         ></values-table>
         <hr />
@@ -27,7 +29,8 @@
           id="server-stats"
           paragraph="Statistics"
           table-id="table-stats"
-          source.bind="serverStatisticsData"
+          update-select="false"
+          source.bind="serverStatisticsData & signal:'update'"
           shown.bind="serverIsShown & signal:'update'"
         ></values-table>
       </div>
@@ -42,6 +45,7 @@
           id="client-info"
           paragraph="General Info"
           table-id="table-info"
+          update-select="false"
           source.bind="clientGeneralInfo"
           shown.bind="clientIsShown & signal:'update'"
         ></values-table>
@@ -52,6 +56,7 @@
           id="client-stats"
           paragraph="Statistics"
           table-id="table-stats"
+          update-select="false"
           source.bind="clientStatisticsData"
           shown.bind="clientIsShown & signal:'update'"
         ></values-table>

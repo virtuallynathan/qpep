@@ -153,9 +153,17 @@ func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	_, _ = w.Write(data)
 }
 
+var totalUp = 0.0
+var totalDw = 0.0
+
 // path /statistics/data , /statistics/:addr/data
 func apiStatisticsData(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	//reqAddress := ps.ByName("addr")
+
+	var up = rand.Float64() * 1000.0
+	totalUp += up
+	var dw = rand.Float64() * 1000.0
+	totalDw += dw
 
 	info := StatsInfoReponse{}
 	info.Data = make([]StatsInfoRow, 0, 32)
@@ -167,12 +175,22 @@ func apiStatisticsData(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        2,
 		Attribute: "Current Download Speed",
-		Value:     fmt.Sprintf("%.2f", rand.Float64()*1000.0),
+		Value:     fmt.Sprintf("%.2f", dw),
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        3,
 		Attribute: "Current Upload Speed",
-		Value:     fmt.Sprintf("%.2f", rand.Float64()*1000.0),
+		Value:     fmt.Sprintf("%.2f", up),
+	})
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        4,
+		Attribute: "Total Downloaded Bytes",
+		Value:     fmt.Sprintf("%.2f", totalDw),
+	})
+	info.Data = append(info.Data, StatsInfoRow{
+		ID:        5,
+		Attribute: "Total Uploaded Bytes",
+		Value:     fmt.Sprintf("%.2f", totalUp),
 	})
 
 	data, err := json.Marshal(info)

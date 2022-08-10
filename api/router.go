@@ -136,7 +136,7 @@ func (r *APIRouter) registerHandlers() {
 
 	r.registerAPIMethod("GET", API_STATS_HOSTS_PATH, apiFilter(apiStatisticsHosts), true, false)
 	r.registerAPIMethod("GET", API_STATS_INFO_PATH, apiFilter(apiStatisticsInfo), false, true)
-	r.registerAPIMethod("GET", API_STATS_DATA_PATH, apiFilter(apiStatisticsData), false, true)
+	r.registerAPIMethod("GET", API_STATS_DATA_PATH, apiFilter(apiStatisticsData), true, true)
 	r.registerAPIMethod("GET", API_STATS_INFO_SRV_PATH, apiFilter(apiStatisticsInfo), true, false)
 	r.registerAPIMethod("GET", API_STATS_DATA_SRV_PATH, apiFilter(apiStatisticsData), true, false)
 }

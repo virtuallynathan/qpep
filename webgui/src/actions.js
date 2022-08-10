@@ -23,6 +23,13 @@ function setHostModeAndPort(mode, port) {
     store.dispatch(Mutations.setHostModeAndPort, mode, port);
 }
 
+function setServerSelectedAddress(address) {
+    if( typeof(address) !== 'string' || address.length == 0 )
+        return;
+
+    store.dispatch(Mutations.setServerSelectedAddress, address);
+}
+
 function showMessage(msg, type, timeout) {
     if( typeof(type) !== 'string') {
         throw 'It\'s required to pass valid value for type parameter';
@@ -52,6 +59,7 @@ function hideLoader() {
 
 export {
     setHostModeAndPort,
+    setServerSelectedAddress,
     showMessage,
     clearMessage,
     showLoader,
