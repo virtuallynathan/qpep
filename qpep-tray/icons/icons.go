@@ -1,6 +1,3 @@
-//go:build windows
-// +build windows
-
 //go:generate go2array -nolist -platform windows -var ConfigIconData -package icons config_icon.ico
 //go:generate go2array -nolist -platform windows -var ExitIconData -package icons exit_icon.ico
 //go:generate go2array -nolist -platform windows -var RefreshIconData -package icons refresh_icon.ico
