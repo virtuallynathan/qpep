@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"runtime"
@@ -28,17 +27,16 @@ func formatRequest(r *http.Request) string {
 
 // path /status
 func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var counter int = -1
+	var counter float64 = -1.0
 	addr := ps.ByName("addr")
 
 	if len(addr) > 0 {
-		key := Statistics.AsKey(QUIC_CONN, addr)
-		counter = Statistics.Get(key)
+		counter = Statistics.GetCounter(PERF_CONN, addr)
 	}
 
 	data, err := json.Marshal(StatusReponse{
 		LastCheck:         time.Now().Format(time.RFC3339Nano),
-		ConnectionCounter: counter,
+		ConnectionCounter: int(counter),
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -113,9 +111,8 @@ func apiStatisticsHosts(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	_, _ = w.Write(data)
 }
 
-// path /statistics/info, /statistics/:addr/info
+// path /statistics/info, /statistics/info/:addr
 func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	info := StatsInfoReponse{}
 	reqAddress := ps.ByName("addr")
 
 	tm := time.Now().Format(time.RFC1123Z)
@@ -126,6 +123,8 @@ func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		//platform =
 	}
 
+	info := StatsInfoReponse{}
+	info.Data = make([]StatsInfoRow, 0, 3)
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        1,
 		Attribute: "Address",
@@ -152,44 +151,42 @@ func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	_, _ = w.Write(data)
 }
 
-var totalUp = 0.0
-var totalDw = 0.0
-
-// path /statistics/data , /statistics/:addr/data
+// path /statistics/data , /statistics/data/:addr
 func apiStatisticsData(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	//reqAddress := ps.ByName("addr")
+	reqAddress := ps.ByName("addr")
 
-	var up = rand.Float64() * 1000.0
-	totalUp += up
-	var dw = rand.Float64() * 1000.0
-	totalDw += dw
+	currConnections := Statistics.GetCounter(PERF_CONN)
+	upSpeed := Statistics.GetCounter(PERF_UP_SPEED, reqAddress)
+	dwSpeed := Statistics.GetCounter(PERF_DW_SPEED, reqAddress)
+	upTotal := Statistics.GetCounter(PERF_UP_TOTAL, reqAddress)
+	dwTotal := Statistics.GetCounter(PERF_DW_TOTAL, reqAddress)
 
 	info := StatsInfoReponse{}
-	info.Data = make([]StatsInfoRow, 0, 32)
+	info.Data = make([]StatsInfoRow, 0, 5)
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        1,
 		Attribute: "Current Connections",
-		Value:     strconv.Itoa(rand.Intn(20)),
+		Value:     strconv.Itoa(int(currConnections)),
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        2,
-		Attribute: "Current Download Speed",
-		Value:     fmt.Sprintf("%.2f", dw),
+		Attribute: "Current Upload Speed",
+		Value:     fmt.Sprintf("%.2f", upSpeed),
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        3,
-		Attribute: "Current Upload Speed",
-		Value:     fmt.Sprintf("%.2f", up),
+		Attribute: "Current Download Speed",
+		Value:     fmt.Sprintf("%.2f", dwSpeed),
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        4,
-		Attribute: "Total Downloaded Bytes",
-		Value:     fmt.Sprintf("%.2f", totalDw),
+		Attribute: "Total Uploaded Bytes",
+		Value:     fmt.Sprintf("%.2f", upTotal),
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        5,
-		Attribute: "Total Uploaded Bytes",
-		Value:     fmt.Sprintf("%.2f", totalUp),
+		Attribute: "Total Downloaded Bytes",
+		Value:     fmt.Sprintf("%.2f", dwTotal),
 	})
 
 	data, err := json.Marshal(info)

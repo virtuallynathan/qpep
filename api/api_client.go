@@ -126,3 +126,52 @@ func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddre
 
 	return respData
 }
+
+func RequestStatistics(localAddress, gatewayAddress string, apiPort int, publicAddress string) *StatsInfoReponse {
+	apiPath := strings.Replace(API_PREFIX_SERVER+API_STATS_DATA_SRV_PATH, ":addr", publicAddress, -1)
+	addr := fmt.Sprintf("http://%s:%d%s", gatewayAddress, apiPort, apiPath)
+
+	client := getClientForAPI(&net.TCPAddr{
+		IP: net.ParseIP(localAddress),
+	})
+
+	resp, err := client.Get(addr)
+	if err != nil {
+		log.Printf("ERROR: %v\n", err)
+		return nil
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("ERROR: BAD status code %d\n", resp.StatusCode)
+		return nil
+	}
+
+	str := &bytes.Buffer{}
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		str.WriteString(scanner.Text())
+	}
+
+	if scanner.Err() != nil {
+		log.Printf("ERROR: %v\n", scanner.Err())
+		return nil
+	}
+
+	if shared.QuicConfiguration.Verbose {
+		log.Printf("%s\n", str.String())
+	}
+
+	respData := &StatsInfoReponse{}
+	// collect stats
+
+	jsonErr := json.Unmarshal(str.Bytes(), &respData)
+	if jsonErr != nil {
+		log.Printf("ERROR: %v\n", err)
+		return nil
+	}
+
+	return respData
+}

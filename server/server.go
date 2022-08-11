@@ -153,11 +153,11 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	trackedAddress := qpepHeader.SourceAddr.IP.String()
 	proxyAddress := tcpConn.(*net.TCPConn).LocalAddr().String()
 
-	api.Statistics.Increment(api.TOTAL_CONNECTIONS)
-	api.Statistics.Increment(api.QUIC_CONN, trackedAddress)
+	api.Statistics.IncrementCounter(api.TOTAL_CONNECTIONS)
+	api.Statistics.IncrementCounter(api.PERF_CONN, trackedAddress)
 	defer func() {
-		api.Statistics.Decrement(api.QUIC_CONN, trackedAddress)
-		api.Statistics.Decrement(api.TOTAL_CONNECTIONS)
+		api.Statistics.DecrementCounter(api.PERF_CONN, trackedAddress)
+		api.Statistics.DecrementCounter(api.TOTAL_CONNECTIONS)
 	}()
 
 	tcpConn.SetReadDeadline(time.Now().Add(timeOut))

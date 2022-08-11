@@ -83,14 +83,23 @@ func RunClient(ctx context.Context) {
 
 	go ListenTCPConn()
 
+	var connected = false
+
 	for {
 		select {
 		case <-ctx.Done():
 			proxyListener.Close()
 			return
 		case <-time.After(1 * time.Second):
-			apiStatusCheck()
-			continue
+			localAddr := ClientConfiguration.ListenHost
+			apiAddr := ClientConfiguration.GatewayHost
+			apiPort := ClientConfiguration.APIPort
+			if !connected {
+				connected = clientStatusCheck(localAddr, apiAddr, apiPort)
+				continue
+			}
+
+			clientStatisticsUpdate()
 		}
 	}
 }
@@ -248,13 +257,15 @@ func openQuicSession() (quic.Session, error) {
 	return nil, err
 }
 
-func apiStatusCheck() {
-	localAddr := ClientConfiguration.ListenHost
-	apiAddr := ClientConfiguration.GatewayHost
-	apiPort := ClientConfiguration.APIPort
+func clientStatusCheck(localAddr, apiAddr string, apiPort int) bool {
 	if response := api.RequestEcho(localAddr, apiAddr, apiPort); response != nil {
 		log.Printf("Gateway Echo OK\n")
-		return
+		return true
 	}
 	log.Printf("Gateway Echo FAILED\n")
+	return false
+}
+
+func clientStatisticsUpdate() {
+
 }

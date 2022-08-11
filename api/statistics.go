@@ -8,9 +8,14 @@ import (
 )
 
 const (
-	TOTAL_CONNECTIONS string = "perf-total-connections"
-	QUIC_CONN         string = "perf-quic-from"
-	QUIC_HOSTS        string = "perf-host"
+	TOTAL_CONNECTIONS string = "connections"   // total connections open on the server at this time
+	PERF_CONN         string = "perf-conn"     // number of current connections for a particular client
+	PERF_UP_SPEED     string = "perf-upspeed"  // current upload speed for a particular client
+	PERF_DW_SPEED     string = "perf-dwspeed"  // current download speed for a particular client
+	PERF_UP_TOTAL     string = "perf-uptotal"  // total number of bytes uploaded by a particular client
+	PERF_DW_TOTAL     string = "perf-dwtotal"  // total number of bytes downloaded by a particular client
+	INFO_PLATFORM     string = "info-platform" // platform used by the client, as communicated in api echo
+	INFO_UPDATE       string = "info-update"   // last time server received an echo from the client
 )
 
 var Statistics = &statistics{}
@@ -20,32 +25,32 @@ func init() {
 }
 
 type statistics struct {
-	semCounters   *sync.RWMutex
-	semAddressMap *sync.RWMutex
+	semCounters *sync.RWMutex
+	semState    *sync.RWMutex
 
-	counters        map[string]int
-	sourceToDestMap map[string]string
-	hosts           []string
+	counters map[string]float64
+	state    map[string]string
+	hosts    []string
 }
 
 func (s *statistics) init() {
-	if s.semCounters != nil && s.semAddressMap != nil {
+	if s.semCounters != nil && s.semState != nil {
 		return
 	}
 
 	s.semCounters = &sync.RWMutex{}
-	s.semAddressMap = &sync.RWMutex{}
+	s.semState = &sync.RWMutex{}
 	s.hosts = make([]string, 0, 32)
 }
 
 func (s *statistics) Reset() {
 	s.semCounters = nil
-	s.semAddressMap = nil
+	s.semState = nil
 	s.init()
 
 	log.Println("Server statistics reset.")
-	s.counters = make(map[string]int)
-	s.sourceToDestMap = make(map[string]string)
+	s.counters = make(map[string]float64)
+	s.state = make(map[string]string)
 }
 
 func (s *statistics) AsKey(prefix string, values ...string) string {
@@ -53,7 +58,8 @@ func (s *statistics) AsKey(prefix string, values ...string) string {
 }
 
 // ---- Counters ---- //
-func (s *statistics) Get(key string) int {
+func (s *statistics) GetCounter(prefix string, keyparts ...string) float64 {
+	key := s.AsKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return -1
 	}
@@ -68,13 +74,13 @@ func (s *statistics) Get(key string) int {
 	return -1
 }
 
-func (s *statistics) Set(key string, value int) int {
-	if value < 0 {
-		panic(fmt.Sprintf("Will not track negative values: (%s: %d)", key, value))
-	}
-
+func (s *statistics) SetCounter(value float64, prefix string, keyparts ...string) float64 {
+	key := s.AsKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return -1
+	}
+	if value < 0 {
+		panic(fmt.Sprintf("Will not track negative values: (%s: %f)", key, value))
 	}
 
 	s.init()
@@ -85,7 +91,7 @@ func (s *statistics) Set(key string, value int) int {
 	return value
 }
 
-func (s *statistics) Increment(prefix string, keyparts ...string) int {
+func (s *statistics) IncrementCounter(prefix string, keyparts ...string) float64 {
 
 	key := s.AsKey(prefix, keyparts...)
 	if len(key) == 0 {
@@ -106,13 +112,13 @@ func (s *statistics) Increment(prefix string, keyparts ...string) int {
 
 	log.Printf("counter: %s = %d\n", key, value+1)
 	s.counters[key] = value + 1
-	return value + 1
+	return value + 1.0
 }
 
-func (s *statistics) Decrement(prefix string, keyparts ...string) int {
+func (s *statistics) DecrementCounter(prefix string, keyparts ...string) float64 {
 	key := s.AsKey(prefix, keyparts...)
 	if len(key) == 0 {
-		return -1
+		return -1.0
 	}
 
 	s.init()
@@ -120,23 +126,54 @@ func (s *statistics) Decrement(prefix string, keyparts ...string) int {
 	defer s.semCounters.Unlock()
 
 	value, ok := s.counters[key]
-	if !ok || value-1 <= 0 {
-		s.counters[key] = 0
-		return 0
+	if !ok || value-1 <= 0.0 {
+		s.counters[key] = 0.0
+		return 0.0
 	}
 
-	log.Printf("counter: %s = %d\n", key, value-1)
+	log.Printf("counter: %s = %d\n", key, value-1.0)
 	s.counters[key] = value - 1
-	return value - 1
+	return value - 1.0
+}
+
+// ---- State ---- //
+func (s *statistics) GetState(prefix string, keyparts ...string) string {
+	key := s.AsKey(prefix, keyparts...)
+	if len(key) == 0 {
+		return ""
+	}
+
+	s.init()
+	s.semState.RLock()
+	defer s.semState.RUnlock()
+
+	if val, ok := s.state[key]; ok {
+		return val
+	}
+	return ""
+}
+
+func (s *statistics) SetState(value string, prefix string, keyparts ...string) string {
+	key := s.AsKey(prefix, keyparts...)
+	if len(key) == 0 {
+		return ""
+	}
+
+	s.init()
+	s.semState.Lock()
+	defer s.semState.Unlock()
+
+	s.state[key] = value
+	return value
 }
 
 // ---- address mapping ---- //
 func (s *statistics) GetMappedAddress(source string) string {
 	s.init()
-	s.semAddressMap.RLock()
-	defer s.semAddressMap.RUnlock()
+	s.semState.RLock()
+	defer s.semState.RUnlock()
 
-	if val, ok := s.sourceToDestMap[source]; ok {
+	if val, ok := s.state[source]; ok {
 		return val
 	}
 	return ""
@@ -144,22 +181,22 @@ func (s *statistics) GetMappedAddress(source string) string {
 
 func (s *statistics) SetMappedAddress(source string, dest string) {
 	s.init()
-	s.semAddressMap.Lock()
-	defer s.semAddressMap.Unlock()
+	s.semState.Lock()
+	defer s.semState.Unlock()
 
-	if _, ok := s.sourceToDestMap[source]; !ok {
+	if _, ok := s.state[source]; !ok {
 		s.hosts = append(s.hosts, dest)
 	}
-	s.sourceToDestMap[source] = dest
+	s.state[source] = dest
 }
 
 func (s *statistics) DeleteMappedAddress(source string) {
 	s.init()
-	s.semAddressMap.Lock()
-	defer s.semAddressMap.Unlock()
+	s.semState.Lock()
+	defer s.semState.Unlock()
 
-	if _, ok := s.sourceToDestMap[source]; ok {
-		mapped := s.sourceToDestMap[source]
+	if _, ok := s.state[source]; ok {
+		mapped := s.state[source]
 		for i := 0; i < len(s.hosts); i++ {
 			if !strings.EqualFold(s.hosts[i], mapped) {
 				continue
@@ -168,14 +205,14 @@ func (s *statistics) DeleteMappedAddress(source string) {
 			break
 		}
 	}
-	delete(s.sourceToDestMap, source)
+	delete(s.state, source)
 }
 
 // ---- hosts ---- //
 func (s *statistics) GetHosts() []string {
 	s.init()
-	s.semAddressMap.RLock()
-	defer s.semAddressMap.RUnlock()
+	s.semState.RLock()
+	defer s.semState.RUnlock()
 
 	v := append([]string{}, "127.0.0.1") // for test
 	v = append(v, s.hosts...)
