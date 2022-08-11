@@ -22,6 +22,7 @@ const (
 	API_PREFIX_CLIENT string = "/api/v1/client"
 
 	API_ECHO_PATH           string = "/echo"
+	API_VERSIONS_PATH       string = "/versions"
 	API_STATUS_PATH         string = "/status/:addr"
 	API_STATS_HOSTS_PATH    string = "/statistics/hosts"
 	API_STATS_INFO_PATH     string = "/statistics/info"
@@ -132,6 +133,7 @@ func (r *APIRouter) registerHandlers() {
 
 	// register apis with respective allowed usage
 	r.registerAPIMethod("GET", API_ECHO_PATH, apiFilter(apiEcho), true, true)
+	r.registerAPIMethod("GET", API_VERSIONS_PATH, apiFilter(apiVersions), true, true)
 	r.registerAPIMethod("GET", API_STATUS_PATH, apiFilter(apiStatus), true, false)
 
 	r.registerAPIMethod("GET", API_STATS_HOSTS_PATH, apiFilter(apiStatisticsHosts), true, false)

@@ -24,8 +24,8 @@ export class ValuesTableCustomElement {
   constructor(queue) {
     this.paragraph = "Title";
     this.tableId = "table";
-    this.prevSource = "testdata_server.json";
-    this.source = "testdata_server.json";
+    this.prevSource = "";
+    this.source = "";
     this.updateSelect = false;
     this.queue = queue;
     this.shown = false;
@@ -33,7 +33,9 @@ export class ValuesTableCustomElement {
   }
 
   attached() {
-    setInterval(() => { this.queueSignalObserver() }, 500);
+    setInterval(() => {
+      this.queueSignalObserver();
+    }, 500);
 
     this.initDatatable();
   }
@@ -43,7 +45,7 @@ export class ValuesTableCustomElement {
 
     let self = this;
 
-    $(document).ready(function() {
+    $(document).ready(function () {
       let source = self.source;
       let id = "#" + self.tableId;
       let table = new DataTable(id, {
@@ -54,22 +56,27 @@ export class ValuesTableCustomElement {
         language: {
           emptyTable: "",
         },
-        select : {
-          style: 'single',
-          items: 'row',
-          className: 'selected',
-          blurable : false,
+        select: {
+          style: "single",
+          items: "row",
+          className: "selected",
+          blurable: false,
+          toggleable: false,
           info: false,
         },
         deferRender: true,
-        rowId: 'id',
+        rowId: "id",
         ajax: function (d, cb) {
           fetch(source, {
             headers: new Headers({ Accept: "application/json" }),
           })
             .then((response) => {
               if (!response.ok) {
-                if (!self.failed) {
+                if (
+                  !self.failed &&
+                  response.status < 400 &&
+                  response.status >= 500
+                ) {
                   showMessage(
                     `HTTP Error Status: ${response.status}`,
                     "error",
@@ -103,7 +110,6 @@ export class ValuesTableCustomElement {
         if ($tab.is(":visible") !== true) return; // skip update
 
         table.ajax.reload(null, false);
-
       }, 3000);
     });
   }

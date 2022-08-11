@@ -8,14 +8,15 @@ import (
 )
 
 const (
-	TOTAL_CONNECTIONS string = "connections"   // total connections open on the server at this time
-	PERF_CONN         string = "perf-conn"     // number of current connections for a particular client
-	PERF_UP_SPEED     string = "perf-upspeed"  // current upload speed for a particular client
-	PERF_DW_SPEED     string = "perf-dwspeed"  // current download speed for a particular client
-	PERF_UP_TOTAL     string = "perf-uptotal"  // total number of bytes uploaded by a particular client
-	PERF_DW_TOTAL     string = "perf-dwtotal"  // total number of bytes downloaded by a particular client
-	INFO_PLATFORM     string = "info-platform" // platform used by the client, as communicated in api echo
-	INFO_UPDATE       string = "info-update"   // last time server received an echo from the client
+	TOTAL_CONNECTIONS  string = "counter-connections" // total connections open on the server at this time
+	PERF_CONN          string = "perf-connections"    // number of current connections for a particular client
+	PERF_UP_SPEED      string = "perf-upspeed"        // current upload speed for a particular client
+	PERF_DW_SPEED      string = "perf-dwspeed"        // current download speed for a particular client
+	PERF_UP_TOTAL      string = "perf-uptotal"        // total number of bytes uploaded by a particular client
+	PERF_DW_TOTAL      string = "perf-dwtotal"        // total number of bytes downloaded by a particular client
+	INFO_PLATFORM      string = "info-platform"       // platform used by the client, as communicated in api echo
+	INFO_UPDATE        string = "info-update"         // last time server received an echo from the client
+	INFO_OTHER_VERSION string = "info-remote-version" // version of the software on the other end of the connection
 )
 
 var Statistics = &statistics{}
@@ -53,13 +54,13 @@ func (s *statistics) Reset() {
 	s.state = make(map[string]string)
 }
 
-func (s *statistics) AsKey(prefix string, values ...string) string {
+func (s *statistics) asKey(prefix string, values ...string) string {
 	return strings.ToLower(prefix + "-" + strings.Join(values, "-"))
 }
 
 // ---- Counters ---- //
 func (s *statistics) GetCounter(prefix string, keyparts ...string) float64 {
-	key := s.AsKey(prefix, keyparts...)
+	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return -1
 	}
@@ -75,7 +76,7 @@ func (s *statistics) GetCounter(prefix string, keyparts ...string) float64 {
 }
 
 func (s *statistics) SetCounter(value float64, prefix string, keyparts ...string) float64 {
-	key := s.AsKey(prefix, keyparts...)
+	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return -1
 	}
@@ -93,7 +94,7 @@ func (s *statistics) SetCounter(value float64, prefix string, keyparts ...string
 
 func (s *statistics) IncrementCounter(prefix string, keyparts ...string) float64 {
 
-	key := s.AsKey(prefix, keyparts...)
+	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		log.Printf("counter: %s = -1\n", key)
 		return -1
@@ -116,7 +117,7 @@ func (s *statistics) IncrementCounter(prefix string, keyparts ...string) float64
 }
 
 func (s *statistics) DecrementCounter(prefix string, keyparts ...string) float64 {
-	key := s.AsKey(prefix, keyparts...)
+	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return -1.0
 	}
@@ -138,7 +139,7 @@ func (s *statistics) DecrementCounter(prefix string, keyparts ...string) float64
 
 // ---- State ---- //
 func (s *statistics) GetState(prefix string, keyparts ...string) string {
-	key := s.AsKey(prefix, keyparts...)
+	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return ""
 	}
@@ -154,7 +155,7 @@ func (s *statistics) GetState(prefix string, keyparts ...string) string {
 }
 
 func (s *statistics) SetState(value string, prefix string, keyparts ...string) string {
-	key := s.AsKey(prefix, keyparts...)
+	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return ""
 	}

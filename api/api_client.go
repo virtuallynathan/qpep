@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -41,7 +42,14 @@ func RequestEcho(localAddress, address string, port int) *EchoResponse {
 		IP: net.ParseIP(localAddress),
 	})
 
-	resp, err := client.Get(addr)
+	req, err := http.NewRequest("GET", addr, nil)
+	if err != nil {
+		log.Printf("ERROR: %v\n", err)
+		return nil
+	}
+	req.Header.Set("User-Agent", runtime.GOOS)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("ERROR: %v\n", err)
 		return nil
@@ -77,6 +85,7 @@ func RequestEcho(localAddress, address string, port int) *EchoResponse {
 		return nil
 	}
 
+	Statistics.SetState(INFO_OTHER_VERSION, respData.ServerVersion)
 	return respData
 }
 

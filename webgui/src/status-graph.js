@@ -116,17 +116,14 @@ export class StatusGraphCustomElement {
       .then((obj) => {
         var up = null;
         var dw = null;
-        log.info(obj);
         obj = obj.data;
 
         for (var i = 0; i < obj.length; i++) {
           if (obj[i].attribute == "Current Download Speed") {
             dw = ~~obj[i].value;
-            log.info("dw", dw);
           }
           if (obj[i].attribute == "Current Upload Speed") {
             up = ~~obj[i].value;
-            log.info("up", up);
           }
         }
 

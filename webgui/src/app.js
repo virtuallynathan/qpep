@@ -31,24 +31,30 @@ export class App {
   constructor(eventAggregator, router, store) {
     this.store = store;
     this.router = router;
+    this.mode = "";
+    this.port = 0;
 
     this.title = "QPep high-latency network accelerator";
     this.modules = ["status-graph", "statistics"];
+    this.clientVersion = "N/A";
+    this.serverVersion = "N/A";
+  
+    this.updateDataTimer = setInterval(() => this.updateVersionsFooter(), 1000);
 
     eventAggregator.subscribe('router:navigation:complete', this.routeNavigationCompleted); 
     showLoader();
   }
 
   stateChanged(newState, oldState) {
-    log.info( 'app-state', oldState, '->', newState );
+    //log.info( 'app-state', oldState, '->', newState );
   }
 
   routeNavigationCompleted = (eventArgs, eventName) => {
     try {
-      var mode = eventArgs.instruction.queryParams.mode;
-      var port = ~~(eventArgs.instruction.queryParams.port);
+      this.mode = eventArgs.instruction.queryParams.mode;
+      this.port = ~~(eventArgs.instruction.queryParams.port);
 
-      setHostModeAndPort( mode, port );
+      setHostModeAndPort( this.mode, this.port );
 
       hideLoader();
     } catch (err) {
@@ -61,5 +67,26 @@ export class App {
         $(".is-active").removeClass("is-active");
       });
     }
+  }
+
+  updateVersionsFooter() {
+    let source = `http://127.0.0.1:${this.port}/api/v1/${this.mode}/versions`;
+
+    fetch(source)
+      .then((response) => {
+        return response.json();
+      })
+      .then((obj) => {
+        this.clientVersion = obj.client;
+        if( obj.server.length > 0 )
+          this.serverVersion = obj.server;
+        else
+          this.serverVersion = "N/A";
+      })
+      .catch((error) => {
+        showMessage(error, "error", 1000);
+      });
+
+    ;
   }
 }

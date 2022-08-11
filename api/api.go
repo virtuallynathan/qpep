@@ -75,8 +75,36 @@ func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	data, err := json.Marshal(EchoResponse{
-		Address: dataAddr[0],
-		Port:    port,
+		Address:       dataAddr[0],
+		Port:          port,
+		ServerVersion: shared.Version(),
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+
+	Statistics.SetState(INFO_PLATFORM, r.Header.Get("User-Agent"))
+	Statistics.SetState(INFO_UPDATE, time.Now().Format(time.RFC1123Z))
+}
+
+// path /versions
+func apiVersions(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	server := "N/A"
+	client := "N/A"
+	if strings.Contains(r.URL.String(), API_PREFIX_SERVER) {
+		server = shared.Version()
+	} else {
+		server = Statistics.GetState(INFO_OTHER_VERSION)
+		client = shared.Version()
+	}
+
+	data, err := json.Marshal(VersionsResponse{
+		Server: server,
+		Client: client,
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -115,12 +143,15 @@ func apiStatisticsHosts(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reqAddress := ps.ByName("addr")
 
-	tm := time.Now().Format(time.RFC1123Z)
+	lastUpdate := ""
 	address := shared.QuicConfiguration.ListenIP
 	platform := runtime.GOOS
 	if len(reqAddress) > 0 {
 		address = reqAddress
-		//platform =
+		platform = Statistics.GetState(INFO_PLATFORM)
+		lastUpdate = Statistics.GetState(INFO_UPDATE)
+	} else {
+		lastUpdate = time.Now().Format(time.RFC1123Z)
 	}
 
 	info := StatsInfoReponse{}
@@ -133,7 +164,7 @@ func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        2,
 		Attribute: "Last Update",
-		Value:     tm,
+		Value:     lastUpdate,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        3,
@@ -156,10 +187,26 @@ func apiStatisticsData(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	reqAddress := ps.ByName("addr")
 
 	currConnections := Statistics.GetCounter(PERF_CONN)
+	if currConnections == -1.0 {
+		currConnections = 0.0
+	}
+
 	upSpeed := Statistics.GetCounter(PERF_UP_SPEED, reqAddress)
 	dwSpeed := Statistics.GetCounter(PERF_DW_SPEED, reqAddress)
 	upTotal := Statistics.GetCounter(PERF_UP_TOTAL, reqAddress)
 	dwTotal := Statistics.GetCounter(PERF_DW_TOTAL, reqAddress)
+	if upSpeed == -1.0 {
+		upSpeed = 0.0
+	}
+	if dwSpeed == -1.0 {
+		dwSpeed = 0.0
+	}
+	if upTotal == -1.0 {
+		upTotal = 0.0
+	}
+	if dwTotal == -1.0 {
+		dwTotal = 0.0
+	}
 
 	info := StatsInfoReponse{}
 	info.Data = make([]StatsInfoRow, 0, 5)
