@@ -67,9 +67,13 @@ func RunServer(ctx context.Context) {
 
 	go ListenQuicSession()
 
+	ctxPerfWatcher, perfWatcherCancel := context.WithCancel(context.Background())
+	go performanceWatcher(ctxPerfWatcher)
+
 	for {
 		select {
 		case <-ctx.Done():
+			perfWatcherCancel()
 			quicListener.Close()
 			return
 		case <-time.After(10 * time.Millisecond):
@@ -153,11 +157,11 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	trackedAddress := qpepHeader.SourceAddr.IP.String()
 	proxyAddress := tcpConn.(*net.TCPConn).LocalAddr().String()
 
-	api.Statistics.IncrementCounter(api.TOTAL_CONNECTIONS)
-	api.Statistics.IncrementCounter(api.PERF_CONN, trackedAddress)
+	api.Statistics.IncrementCounter(1.0, api.TOTAL_CONNECTIONS)
+	api.Statistics.IncrementCounter(1.0, api.PERF_CONN, trackedAddress)
 	defer func() {
-		api.Statistics.DecrementCounter(api.PERF_CONN, trackedAddress)
-		api.Statistics.DecrementCounter(api.TOTAL_CONNECTIONS)
+		api.Statistics.DecrementCounter(1.0, api.PERF_CONN, trackedAddress)
+		api.Statistics.DecrementCounter(1.0, api.TOTAL_CONNECTIONS)
 	}()
 
 	tcpConn.SetReadDeadline(time.Now().Add(timeOut))
@@ -167,35 +171,53 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	streamWait.Add(2)
 	streamQUICtoTCP := func(dst *net.TCPConn, src quic.Stream) {
 		defer func() {
+			_ = recover()
+
 			api.Statistics.DeleteMappedAddress(proxyAddress)
+			dst.Close()
 			streamWait.Done()
 		}()
 
 		api.Statistics.SetMappedAddress(proxyAddress, trackedAddress)
 
-		_, err = io.Copy(dst, src)
 		err1 := dst.SetLinger(3)
 		if err1 != nil {
 			log.Printf("error on setLinger: %s", err1)
 		}
-		dst.Close()
-		if err != nil {
-			log.Printf("Error on Copy %s", err)
+
+		for {
+			written, err := io.Copy(dst, io.LimitReader(src, 4096))
+			if err != nil {
+				log.Printf("Error on Copy %s", err)
+				break
+			}
+
+			api.Statistics.IncrementCounter(float64(written), api.PERF_DW_COUNT, trackedAddress)
 		}
 	}
 	streamTCPtoQUIC := func(dst quic.Stream, src *net.TCPConn) {
-		defer streamWait.Done()
+		defer func() {
+			_ = recover()
 
-		_, err = io.Copy(dst, src)
-		log.Printf("Finished Copying TCP Conn %s->%s", src.LocalAddr().String(), src.RemoteAddr().String())
+			src.Close()
+			streamWait.Done()
+		}()
+
 		err1 := src.SetLinger(3)
 		if err1 != nil {
 			log.Printf("error on setLinger: %s", err1)
 		}
-		src.Close()
-		if err != nil {
-			log.Printf("Error on Copy %s", err)
+
+		for {
+			written, err := io.Copy(dst, io.LimitReader(src, 4096))
+			if err != nil {
+				log.Printf("Error on Copy %s", err)
+				break
+			}
+
+			api.Statistics.IncrementCounter(float64(written), api.PERF_DW_COUNT, trackedAddress)
 		}
+		log.Printf("Finished Copying TCP Conn %s->%s", src.LocalAddr().String(), src.RemoteAddr().String())
 	}
 
 	go streamQUICtoTCP(tcpConn.(*net.TCPConn), stream)
@@ -203,6 +225,7 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 
 	//we exit (and close the TCP connection) once both streams are done copying
 	streamWait.Wait()
+
 	stream.CancelRead(0)
 	stream.CancelWrite(0)
 	log.Printf("Closing TCP Conn %s->%s", tcpConn.LocalAddr().String(), tcpConn.RemoteAddr().String())
@@ -228,5 +251,41 @@ func generateTLSConfig() *tls.Config {
 	return &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
 		NextProtos:   []string{"qpep"},
+	}
+}
+
+func performanceWatcher(ctx context.Context) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("PANIC: %v", err)
+			debug.PrintStack()
+		}
+	}()
+
+WAITLOOP:
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(1 * time.Second):
+			hosts := api.Statistics.GetHosts()
+
+			for _, host := range hosts {
+				// load the current count and reset it atomically (so there's no race condition)
+				dwCount := api.Statistics.GetCounterAndClear(api.PERF_DW_COUNT, host)
+				upCount := api.Statistics.GetCounterAndClear(api.PERF_UP_COUNT, host)
+				if dwCount < 0.0 || upCount < 0.0 {
+					continue WAITLOOP
+				}
+
+				// update the speeds
+				api.Statistics.SetCounter(dwCount/60.0, api.PERF_DW_SPEED, host)
+				api.Statistics.SetCounter(upCount/60.0, api.PERF_UP_SPEED, host)
+
+				// update the totals for the client
+				api.Statistics.SetCounter(dwCount, api.PERF_DW_TOTAL, host)
+				api.Statistics.SetCounter(upCount, api.PERF_UP_TOTAL, host)
+			}
+		}
 	}
 }

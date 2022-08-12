@@ -10,10 +10,12 @@ import (
 const (
 	TOTAL_CONNECTIONS  string = "counter-connections" // total connections open on the server at this time
 	PERF_CONN          string = "perf-connections"    // number of current connections for a particular client
-	PERF_UP_SPEED      string = "perf-upspeed"        // current upload speed for a particular client
-	PERF_DW_SPEED      string = "perf-dwspeed"        // current download speed for a particular client
-	PERF_UP_TOTAL      string = "perf-uptotal"        // total number of bytes uploaded by a particular client
-	PERF_DW_TOTAL      string = "perf-dwtotal"        // total number of bytes downloaded by a particular client
+	PERF_UP_COUNT      string = "perf-up-count"       // current upload speed for a particular client
+	PERF_DW_COUNT      string = "perf-dw-count"       // current download speed for a particular client
+	PERF_UP_SPEED      string = "perf-up-speed"       // current upload speed for a particular client
+	PERF_DW_SPEED      string = "perf-dw-speed"       // current download speed for a particular client
+	PERF_UP_TOTAL      string = "perf-up-total"       // total number of bytes uploaded by a particular client
+	PERF_DW_TOTAL      string = "perf-dw-total"       // total number of bytes downloaded by a particular client
 	INFO_PLATFORM      string = "info-platform"       // platform used by the client, as communicated in api echo
 	INFO_UPDATE        string = "info-update"         // last time server received an echo from the client
 	INFO_OTHER_VERSION string = "info-remote-version" // version of the software on the other end of the connection
@@ -92,14 +94,33 @@ func (s *statistics) SetCounter(value float64, prefix string, keyparts ...string
 	return value
 }
 
-func (s *statistics) IncrementCounter(prefix string, keyparts ...string) float64 {
+func (s *statistics) GetCounterAndClear(prefix string, keyparts ...string) float64 {
+	key := s.asKey(prefix, keyparts...)
+	if len(key) == 0 {
+		return -1
+	}
+
+	s.init()
+	s.semCounters.Lock()
+	defer s.semCounters.Unlock()
+
+	if val, ok := s.counters[key]; ok {
+		s.counters[key] = 0.0
+		return val
+	}
+	return -1
+}
+
+func (s *statistics) IncrementCounter(incr float64, prefix string, keyparts ...string) float64 {
+	if incr < 0.0 {
+		panic("Cannot increase value by a negative value!")
+	}
 
 	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		log.Printf("counter: %s = -1\n", key)
 		return -1
 	}
-
 	s.init()
 	s.semCounters.Lock()
 	defer s.semCounters.Unlock()
@@ -111,12 +132,16 @@ func (s *statistics) IncrementCounter(prefix string, keyparts ...string) float64
 		return 1
 	}
 
-	log.Printf("counter: %s = %d\n", key, value+1)
-	s.counters[key] = value + 1
-	return value + 1.0
+	log.Printf("counter: %s = %d\n", key, value+incr)
+	s.counters[key] = value + incr
+	return value + incr
 }
 
-func (s *statistics) DecrementCounter(prefix string, keyparts ...string) float64 {
+func (s *statistics) DecrementCounter(decr float64, prefix string, keyparts ...string) float64 {
+	if decr < 0.0 {
+		panic("Please specify decrement as a positive value!")
+	}
+
 	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return -1.0
@@ -127,14 +152,14 @@ func (s *statistics) DecrementCounter(prefix string, keyparts ...string) float64
 	defer s.semCounters.Unlock()
 
 	value, ok := s.counters[key]
-	if !ok || value-1 <= 0.0 {
+	if !ok || value-1.0 <= 0.0 {
 		s.counters[key] = 0.0
 		return 0.0
 	}
 
-	log.Printf("counter: %s = %d\n", key, value-1.0)
-	s.counters[key] = value - 1
-	return value - 1.0
+	log.Printf("counter: %s = %d\n", key, value-decr)
+	s.counters[key] = value - decr
+	return value - decr
 }
 
 // ---- State ---- //
@@ -154,7 +179,7 @@ func (s *statistics) GetState(prefix string, keyparts ...string) string {
 	return ""
 }
 
-func (s *statistics) SetState(value string, prefix string, keyparts ...string) string {
+func (s *statistics) SetState(value, prefix string, keyparts ...string) string {
 	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
 		return ""
