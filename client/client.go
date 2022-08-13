@@ -84,6 +84,7 @@ func RunClient(ctx context.Context) {
 	go ListenTCPConn()
 
 	var connected = false
+	var publicAddress = ""
 
 	for {
 		select {
@@ -95,11 +96,15 @@ func RunClient(ctx context.Context) {
 			apiAddr := ClientConfiguration.GatewayHost
 			apiPort := ClientConfiguration.APIPort
 			if !connected {
-				connected = clientStatusCheck(localAddr, apiAddr, apiPort)
+				if ok, response := gatewayStatusCheck(localAddr, apiAddr, apiPort); ok {
+					connected = true
+					publicAddress = response.Address
+					log.Printf("Server returned public address %s\n", publicAddress)
+				}
 				continue
 			}
 
-			clientStatisticsUpdate()
+			connected = clientStatisticsUpdate(localAddr, apiAddr, apiPort, publicAddress)
 		}
 	}
 }
@@ -257,15 +262,28 @@ func openQuicSession() (quic.Session, error) {
 	return nil, err
 }
 
-func clientStatusCheck(localAddr, apiAddr string, apiPort int) bool {
-	if response := api.RequestEcho(localAddr, apiAddr, apiPort); response != nil {
+func gatewayStatusCheck(localAddr, apiAddr string, apiPort int) (bool, *api.EchoResponse) {
+	if response := api.RequestEcho(localAddr, apiAddr, apiPort, true); response != nil {
 		log.Printf("Gateway Echo OK\n")
-		return true
+		return true, response
 	}
 	log.Printf("Gateway Echo FAILED\n")
-	return false
+	return false, nil
 }
 
-func clientStatisticsUpdate() {
+func clientStatisticsUpdate(localAddr, apiAddr string, apiPort int, publicAddress string) bool {
+	response := api.RequestStatistics(localAddr, apiAddr, apiPort, publicAddress)
+	if response == nil {
+		log.Printf("Statistics update failed, resetting connection status\n")
+		return false
+	}
 
+	for _, stat := range response.Data {
+		value, err := strconv.ParseFloat(stat.Value, 64)
+		if err != nil {
+			continue
+		}
+		api.Statistics.SetCounter(value, stat.Name)
+	}
+	return true
 }

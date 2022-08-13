@@ -23,6 +23,10 @@ import (
 	"github.com/lucas-clemente/quic-go"
 )
 
+const (
+	INITIAL_BUFF_SIZE = int64(4096)
+)
+
 var (
 	ServerConfiguration = ServerConfig{
 		ListenHost: "0.0.0.0",
@@ -42,7 +46,7 @@ type ServerConfig struct {
 func RunServer(ctx context.Context) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("PANIC: %v", err)
+			log.Printf("PANIC: %v\n", err)
 			debug.PrintStack()
 		}
 		if quicListener != nil {
@@ -56,11 +60,11 @@ func RunServer(ctx context.Context) {
 	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
 
 	listenAddr := ServerConfiguration.ListenHost + ":" + strconv.Itoa(ServerConfiguration.ListenPort)
-	log.Printf("Opening QPEP Server on: %s", listenAddr)
+	log.Printf("Opening QPEP Server on: %s\n", listenAddr)
 	var err error
 	quicListener, err = quic.ListenAddr(listenAddr, generateTLSConfig(), &client.QuicClientConfiguration)
 	if err != nil {
-		log.Printf("Encountered error while binding QUIC listener: %s", err)
+		log.Printf("Encountered error while binding QUIC listener: %s\n", err)
 		return
 	}
 	defer quicListener.Close()
@@ -85,7 +89,7 @@ func RunServer(ctx context.Context) {
 func ListenQuicSession() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("PANIC: %v", err)
+			log.Printf("PANIC: %v\n", err)
 			debug.PrintStack()
 		}
 	}()
@@ -93,7 +97,7 @@ func ListenQuicSession() {
 		var err error
 		quicSession, err = quicListener.Accept(context.Background())
 		if err != nil {
-			log.Printf("Unrecoverable error while accepting QUIC session: %s", err)
+			log.Printf("Unrecoverable error while accepting QUIC session: %s\n", err)
 			return
 		}
 		go ListenQuicConn(quicSession)
@@ -103,7 +107,7 @@ func ListenQuicSession() {
 func ListenQuicConn(quicSession quic.Session) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("PANIC: %v", err)
+			log.Printf("PANIC: %v\n", err)
 			debug.PrintStack()
 		}
 	}()
@@ -111,7 +115,7 @@ func ListenQuicConn(quicSession quic.Session) {
 		stream, err := quicSession.AcceptStream(context.Background())
 		if err != nil {
 			if err.Error() != "NO_ERROR: No recent network activity" {
-				log.Printf("Unrecoverable error while accepting QUIC stream: %s", err)
+				log.Printf("Unrecoverable error while accepting QUIC stream: %s\n", err)
 			}
 			return
 		}
@@ -124,13 +128,13 @@ func ListenQuicConn(quicSession quic.Session) {
 func HandleQuicStream(stream quic.Stream) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("PANIC: %v", err)
+			log.Printf("PANIC: %v\n", err)
 			debug.PrintStack()
 		}
 	}()
 	qpepHeader, err := shared.GetQpepHeader(stream)
 	if err != nil {
-		log.Printf("Unable to find QPEP header: %s", err)
+		log.Printf("Unable to find QPEP header: %s\n", err)
 		return
 	}
 	go handleTCPConn(stream, qpepHeader)
@@ -139,7 +143,7 @@ func HandleQuicStream(stream quic.Stream) {
 func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("PANIC: %v", err)
+			log.Printf("PANIC: %v\n", err)
 			debug.PrintStack()
 		}
 	}()
@@ -149,7 +153,7 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	log.Printf("Opening TCP Connection to %s, from %s\n", qpepHeader.DestAddr, qpepHeader.SourceAddr)
 	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), timeOut)
 	if err != nil {
-		log.Printf("Unable to open TCP connection from QPEP stream: %s", err)
+		log.Printf("Unable to open TCP connection from QPEP stream: %s\n", err)
 		return
 	}
 	log.Printf("Opened TCP Conn %s -> %s\n", qpepHeader.SourceAddr, qpepHeader.DestAddr)
@@ -182,18 +186,24 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 
 		err1 := dst.SetLinger(3)
 		if err1 != nil {
-			log.Printf("error on setLinger: %s", err1)
+			log.Printf("error on setLinger: %s\n", err1)
 		}
 
+		var buffSize = INITIAL_BUFF_SIZE
 		for {
-			written, err := io.Copy(dst, io.LimitReader(src, 4096))
-			if err != nil {
-				log.Printf("Error on Copy %s", err)
+			written, err := io.Copy(dst, io.LimitReader(src, buffSize))
+			if err != nil || written == 0 {
+				log.Printf("Error on Copy %s\n", err)
 				break
 			}
 
 			api.Statistics.IncrementCounter(float64(written), api.PERF_DW_COUNT, trackedAddress)
+			buffSize = int64(written * 2)
+			if buffSize < INITIAL_BUFF_SIZE {
+				buffSize = INITIAL_BUFF_SIZE
+			}
 		}
+		log.Printf("Finished Copying Stream ID %d, TCP Conn %s->%s\n", src.StreamID(), dst.LocalAddr().String(), dst.RemoteAddr().String())
 	}
 	streamTCPtoQUIC := func(dst quic.Stream, src *net.TCPConn) {
 		defer func() {
@@ -205,19 +215,24 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 
 		err1 := src.SetLinger(3)
 		if err1 != nil {
-			log.Printf("error on setLinger: %s", err1)
+			log.Printf("error on setLinger: %s\n", err1)
 		}
 
+		var buffSize = INITIAL_BUFF_SIZE
 		for {
-			written, err := io.Copy(dst, io.LimitReader(src, 4096))
-			if err != nil {
-				log.Printf("Error on Copy %s", err)
+			written, err := io.Copy(dst, io.LimitReader(src, INITIAL_BUFF_SIZE))
+			if err != nil || written == 0 {
+				log.Printf("Error on Copy %s\n", err)
 				break
 			}
 
-			api.Statistics.IncrementCounter(float64(written), api.PERF_DW_COUNT, trackedAddress)
+			api.Statistics.IncrementCounter(float64(written), api.PERF_UP_COUNT, trackedAddress)
+			buffSize = int64(written * 2)
+			if buffSize < INITIAL_BUFF_SIZE {
+				buffSize = INITIAL_BUFF_SIZE
+			}
 		}
-		log.Printf("Finished Copying TCP Conn %s->%s", src.LocalAddr().String(), src.RemoteAddr().String())
+		log.Printf("Finished Copying TCP Conn %s->%s, Stream ID %d\n", src.LocalAddr().String(), src.RemoteAddr().String(), dst.StreamID())
 	}
 
 	go streamQUICtoTCP(tcpConn.(*net.TCPConn), stream)
@@ -228,7 +243,7 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 
 	stream.CancelRead(0)
 	stream.CancelWrite(0)
-	log.Printf("Closing TCP Conn %s->%s", tcpConn.LocalAddr().String(), tcpConn.RemoteAddr().String())
+	log.Printf("Closing TCP Conn %s->%s\n", tcpConn.LocalAddr().String(), tcpConn.RemoteAddr().String())
 }
 
 func generateTLSConfig() *tls.Config {
@@ -257,12 +272,11 @@ func generateTLSConfig() *tls.Config {
 func performanceWatcher(ctx context.Context) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("PANIC: %v", err)
+			log.Printf("PANIC: %v\n", err)
 			debug.PrintStack()
 		}
 	}()
 
-WAITLOOP:
 	for {
 		select {
 		case <-ctx.Done():
@@ -275,16 +289,16 @@ WAITLOOP:
 				dwCount := api.Statistics.GetCounterAndClear(api.PERF_DW_COUNT, host)
 				upCount := api.Statistics.GetCounterAndClear(api.PERF_UP_COUNT, host)
 				if dwCount < 0.0 || upCount < 0.0 {
-					continue WAITLOOP
+					continue
 				}
 
 				// update the speeds
-				api.Statistics.SetCounter(dwCount/60.0, api.PERF_DW_SPEED, host)
-				api.Statistics.SetCounter(upCount/60.0, api.PERF_UP_SPEED, host)
+				api.Statistics.SetCounter(dwCount/1024.0, api.PERF_DW_SPEED, host)
+				api.Statistics.SetCounter(upCount/1024.0, api.PERF_UP_SPEED, host)
 
 				// update the totals for the client
-				api.Statistics.SetCounter(dwCount, api.PERF_DW_TOTAL, host)
-				api.Statistics.SetCounter(upCount, api.PERF_UP_TOTAL, host)
+				api.Statistics.IncrementCounter(dwCount, api.PERF_DW_TOTAL, host)
+				api.Statistics.IncrementCounter(upCount, api.PERF_UP_TOTAL, host)
 			}
 		}
 	}

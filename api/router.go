@@ -36,7 +36,7 @@ func RunAPIServer(ctx context.Context, localMode bool) {
 	host := shared.QuicConfiguration.ListenIP
 	if localMode {
 		host = "127.0.0.1"
-		log.Printf("Ignored listening address for local api server, forced to 127.0.0.1")
+		log.Printf("Listening address for local api server set to 127.0.0.1")
 	}
 	apiPort := shared.QuicConfiguration.GatewayAPIPort
 
@@ -46,7 +46,9 @@ func RunAPIServer(ctx context.Context, localMode bool) {
 	rtr := NewRouter()
 	rtr.clientMode = shared.QuicConfiguration.ClientFlag
 	rtr.registerHandlers()
-	rtr.registerStaticFiles()
+	if localMode {
+		rtr.registerStaticFiles()
+	}
 
 	srv := NewServer(listenAddr, rtr, ctx)
 	log.Println(srv.ListenAndServe())
@@ -78,7 +80,7 @@ func NewRouter() *APIRouter {
 
 func apiFilter(next httprouter.Handle) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		log.Printf("%s\n", formatRequest(r))
+		log.Printf("apiFilter - %s\n", formatRequest(r))
 
 		// Request API request must accept JSON
 		accepts := r.Header.Get(textproto.CanonicalMIMEHeaderKey("accept"))
@@ -101,7 +103,7 @@ func apiFilter(next httprouter.Handle) httprouter.Handle {
 type notFoundHandler struct{}
 
 func (n *notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s\n", formatRequest(r))
+	log.Printf("notFoundHandler - %s\n", formatRequest(r))
 
 	// Request not found for API request will accept JSON
 	accepts := r.Header.Get(textproto.CanonicalMIMEHeaderKey("accept"))
@@ -117,13 +119,13 @@ func (n *notFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type methodsNotAllowedHandler struct{}
 
 func (n *methodsNotAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%s\n", formatRequest(r))
+	log.Printf("methodsNotAllowedHandler - %s\n", formatRequest(r))
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
 func (r *APIRouter) registerHandlers() {
 	r.handler.PanicHandler = func(w http.ResponseWriter, r *http.Request, i interface{}) {
-		log.Printf("%s\n", formatRequest(r))
+		log.Printf("PanicHandler - %s\n", formatRequest(r))
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	r.handler.NotFound = &notFoundHandler{}
@@ -163,7 +165,7 @@ func (r *APIRouter) registerAPIMethod(method, path string, handle httprouter.Han
 }
 
 func apiForbidden(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	log.Printf("%s\n", formatRequest(r))
+	log.Printf("apiForbidden - %s\n", formatRequest(r))
 
 	w.WriteHeader(http.StatusForbidden)
 }
@@ -178,6 +180,8 @@ func (r *APIRouter) registerStaticFiles() {
 }
 
 func serveFile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	log.Printf("serveFile - %s\n", formatRequest(r))
+
 	urlPath := r.URL.Path[1:]
 	if _, ok := webgui.FilesList[urlPath]; !ok {
 		urlPath = "index.html"

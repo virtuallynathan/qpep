@@ -27,6 +27,7 @@ type StatsInfoRow struct {
 	ID        int    `json:"id"`
 	Attribute string `json:"attribute"`
 	Value     string `json:"value"`
+	Name      string `json:"name"`
 }
 type StatsInfoReponse struct {
 	Data []StatsInfoRow `json:"data"`

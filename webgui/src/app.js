@@ -39,7 +39,7 @@ export class App {
     this.clientVersion = "N/A";
     this.serverVersion = "N/A";
   
-    this.updateDataTimer = setInterval(() => this.updateVersionsFooter(), 1000);
+    this.updateDataTimer = setInterval(() => this.updateVersionsFooter(), 5000);
 
     eventAggregator.subscribe('router:navigation:complete', this.routeNavigationCompleted); 
     showLoader();

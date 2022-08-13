@@ -34,8 +34,12 @@ func getClientForAPI(localAddr net.Addr) *http.Client {
 	}
 }
 
-func RequestEcho(localAddress, address string, port int) *EchoResponse {
-	addr := fmt.Sprintf("http://%s:%d%s", address, port, API_PREFIX_CLIENT+API_ECHO_PATH)
+func RequestEcho(localAddress, address string, port int, toServer bool) *EchoResponse {
+	prefix := API_PREFIX_CLIENT
+	if toServer {
+		prefix = API_PREFIX_SERVER
+	}
+	addr := fmt.Sprintf("http://%s:%d%s", address, port, prefix+API_ECHO_PATH)
 
 	log.Printf("local: %s - %s\n", localAddress, net.ParseIP(localAddress))
 	client := getClientForAPI(&net.TCPAddr{
@@ -174,8 +178,6 @@ func RequestStatistics(localAddress, gatewayAddress string, apiPort int, publicA
 	}
 
 	respData := &StatsInfoReponse{}
-	// collect stats
-
 	jsonErr := json.Unmarshal(str.Bytes(), &respData)
 	if jsonErr != nil {
 		log.Printf("ERROR: %v\n", err)

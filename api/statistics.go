@@ -41,6 +41,7 @@ func (s *statistics) init() {
 		return
 	}
 
+	log.Println("Statistics init.")
 	s.semCounters = &sync.RWMutex{}
 	s.semState = &sync.RWMutex{}
 	s.hosts = make([]string, 0, 32)
@@ -51,13 +52,16 @@ func (s *statistics) Reset() {
 	s.semState = nil
 	s.init()
 
-	log.Println("Server statistics reset.")
+	log.Println("Statistics reset.")
 	s.counters = make(map[string]float64)
 	s.state = make(map[string]string)
 }
 
 func (s *statistics) asKey(prefix string, values ...string) string {
-	return strings.ToLower(prefix + "-" + strings.Join(values, "-"))
+	if len(values) == 0 {
+		return strings.ToLower(prefix) + "[]"
+	}
+	return strings.ToLower(prefix + "[" + strings.Join(values, "-") + "]")
 }
 
 // ---- Counters ---- //
@@ -71,6 +75,7 @@ func (s *statistics) GetCounter(prefix string, keyparts ...string) float64 {
 	s.semCounters.RLock()
 	defer s.semCounters.RUnlock()
 
+	//log.Printf("GET counter: %s = %.2f\n", key, s.counters[key])
 	if val, ok := s.counters[key]; ok {
 		return val
 	}
@@ -83,7 +88,7 @@ func (s *statistics) SetCounter(value float64, prefix string, keyparts ...string
 		return -1
 	}
 	if value < 0 {
-		panic(fmt.Sprintf("Will not track negative values: (%s: %f)", key, value))
+		panic(fmt.Sprintf("Will not track negative values: (%s: %.2f)", key, value))
 	}
 
 	s.init()
@@ -91,6 +96,7 @@ func (s *statistics) SetCounter(value float64, prefix string, keyparts ...string
 	defer s.semCounters.Unlock()
 
 	s.counters[key] = value
+	//log.Printf("SET counter: %s = %.2f\n", key, s.counters[key])
 	return value
 }
 
@@ -104,6 +110,7 @@ func (s *statistics) GetCounterAndClear(prefix string, keyparts ...string) float
 	s.semCounters.Lock()
 	defer s.semCounters.Unlock()
 
+	//log.Printf("GET+CLEAR counter: %s = %.2f\n", key, s.counters[key])
 	if val, ok := s.counters[key]; ok {
 		s.counters[key] = 0.0
 		return val
@@ -118,7 +125,6 @@ func (s *statistics) IncrementCounter(incr float64, prefix string, keyparts ...s
 
 	key := s.asKey(prefix, keyparts...)
 	if len(key) == 0 {
-		log.Printf("counter: %s = -1\n", key)
 		return -1
 	}
 	s.init()
@@ -127,14 +133,12 @@ func (s *statistics) IncrementCounter(incr float64, prefix string, keyparts ...s
 
 	value, ok := s.counters[key]
 	if !ok {
-		log.Printf("counter: %s = *%d\n", key, 1)
-		s.counters[key] = 1
-		return 1
+		s.counters[key] = incr
+		return incr
 	}
 
-	log.Printf("counter: %s = %d\n", key, value+incr)
 	s.counters[key] = value + incr
-	return value + incr
+	return s.counters[key]
 }
 
 func (s *statistics) DecrementCounter(decr float64, prefix string, keyparts ...string) float64 {
@@ -157,7 +161,7 @@ func (s *statistics) DecrementCounter(decr float64, prefix string, keyparts ...s
 		return 0.0
 	}
 
-	log.Printf("counter: %s = %d\n", key, value-decr)
+	//log.Printf("counter: %s = %.2f\n", key, value-decr)
 	s.counters[key] = value - decr
 	return value - decr
 }
@@ -211,7 +215,16 @@ func (s *statistics) SetMappedAddress(source string, dest string) {
 	defer s.semState.Unlock()
 
 	if _, ok := s.state[source]; !ok {
-		s.hosts = append(s.hosts, dest)
+		found := false
+		for i := 0; i < len(s.hosts); i++ {
+			if strings.EqualFold(s.hosts[i], dest) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			s.hosts = append(s.hosts, dest)
+		}
 	}
 	s.state[source] = dest
 }
@@ -240,7 +253,9 @@ func (s *statistics) GetHosts() []string {
 	s.semState.RLock()
 	defer s.semState.RUnlock()
 
-	v := append([]string{}, "127.0.0.1") // for test
-	v = append(v, s.hosts...)
+	// for test
+	//log.Printf("hosts: %v\n", strings.Join(s.hosts, ","))
+	//v := append([]string{}, "127.0.0.1")
+	v := append([]string{}, s.hosts...)
 	return v
 }

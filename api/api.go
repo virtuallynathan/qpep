@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"runtime"
@@ -50,9 +49,9 @@ func apiStatus(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // path /echo
 func apiEcho(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	mappedAddr := r.RemoteAddr
+
 	if !strings.HasPrefix(r.RemoteAddr, "127.") {
 		mappedAddr = Statistics.GetMappedAddress(r.RemoteAddr)
-		log.Printf("remote: %s / mapped: %s\n", r.RemoteAddr, mappedAddr)
 		if len(mappedAddr) == 0 {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -165,11 +164,13 @@ func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		ID:        2,
 		Attribute: "Last Update",
 		Value:     lastUpdate,
+		Name:      INFO_UPDATE,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        3,
 		Attribute: "Platform",
 		Value:     platform,
+		Name:      INFO_PLATFORM,
 	})
 
 	data, err := json.Marshal(info)
@@ -186,7 +187,7 @@ func apiStatisticsInfo(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 func apiStatisticsData(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reqAddress := ps.ByName("addr")
 
-	currConnections := Statistics.GetCounter(PERF_CONN)
+	currConnections := Statistics.GetCounter(PERF_CONN, reqAddress)
 	if currConnections == -1.0 {
 		currConnections = 0.0
 	}
@@ -214,26 +215,31 @@ func apiStatisticsData(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		ID:        1,
 		Attribute: "Current Connections",
 		Value:     strconv.Itoa(int(currConnections)),
+		Name:      PERF_CONN,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        2,
 		Attribute: "Current Upload Speed",
 		Value:     fmt.Sprintf("%.2f", upSpeed),
+		Name:      PERF_UP_SPEED,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        3,
 		Attribute: "Current Download Speed",
 		Value:     fmt.Sprintf("%.2f", dwSpeed),
+		Name:      PERF_DW_SPEED,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        4,
 		Attribute: "Total Uploaded Bytes",
 		Value:     fmt.Sprintf("%.2f", upTotal),
+		Name:      PERF_UP_TOTAL,
 	})
 	info.Data = append(info.Data, StatsInfoRow{
 		ID:        5,
 		Attribute: "Total Downloaded Bytes",
 		Value:     fmt.Sprintf("%.2f", dwTotal),
+		Name:      PERF_DW_TOTAL,
 	})
 
 	data, err := json.Marshal(info)

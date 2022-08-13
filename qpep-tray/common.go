@@ -252,7 +252,7 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 				}
 
 				if state != stateConnected {
-					var resp = api.RequestEcho(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort)
+					var resp = api.RequestEcho(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, (serverCmd != nil))
 					if resp == nil {
 						systray.SetTemplateIcon(animIcons[flip], animIcons[flip])
 						flip = (flip + 1) % 2
