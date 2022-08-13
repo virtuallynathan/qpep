@@ -55,7 +55,7 @@ func RunServer(ctx context.Context) {
 	}()
 
 	// update configuration from flags
-	ServerConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
+	ServerConfiguration.ListenHost = shared.GetDefaultLanListeningAddress(shared.QuicConfiguration.ListenIP)
 	ServerConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
 	ServerConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
 

@@ -64,7 +64,7 @@ func RunClient(ctx context.Context) {
 	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
 	ClientConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
-	ClientConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
+	ClientConfiguration.ListenHost = shared.GetDefaultLanListeningAddress(shared.QuicConfiguration.ListenIP)
 	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
 	ClientConfiguration.MultiStream = shared.QuicConfiguration.MultiStream
 	ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads

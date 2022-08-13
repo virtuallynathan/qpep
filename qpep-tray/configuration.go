@@ -28,7 +28,7 @@ minBeforeDecimation: 100
 gateway: 198.18.0.254
 port: 443
 apiport: 444
-listenaddress: 192.168.1.10
+listenaddress: 0.0.0.0
 listenport: 9443
 multistream: true
 verbose: false

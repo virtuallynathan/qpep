@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/getlantern/systray v1.2.1
+	github.com/jackpal/gateway v1.0.7 // indirect
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/lucas-clemente/quic-go v0.20.1
 	github.com/rs/cors v1.8.2 // indirect

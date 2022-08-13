@@ -3,9 +3,12 @@ package shared
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/jackpal/gateway"
 )
 
 type QuicConfig struct {
@@ -31,7 +34,8 @@ const (
 )
 
 var (
-	QuicConfiguration QuicConfig
+	QuicConfiguration       QuicConfig
+	defaultListeningAddress string
 )
 
 func ParseFlags(args []string) {
@@ -48,7 +52,7 @@ func ParseFlags(args []string) {
 	gatewayHostFlag := flag.String("gateway", "198.18.0.254", "IP address of gateway running qpep server")
 	gatewayPortFlag := flag.Int("port", 443, "Port of gateway running qpep server")
 	gatewayAPIPortFlag := flag.Int("apiport", 444, "IP address of gateway running qpep server")
-	listenHostFlag := flag.String("listenaddress", "127.0.0.1", "IP listen address of qpep client")
+	listenHostFlag := flag.String("listenaddress", "0.0.0.0", "IP listen address of qpep client")
 	listenPortFlag := flag.Int("listenport", 9443, "Listen Port of qpep client")
 	winDiverterThreads := flag.Int("threads", 1, "Worker threads for windivert engine (min 1, max 8)")
 	verbose := flag.Bool("verbose", false, "Outputs data about diverted connections for debug")
@@ -79,4 +83,26 @@ func ParseFlags(args []string) {
 
 	data, _ := json.MarshalIndent(QuicConfiguration, "", " ")
 	log.Printf("%v\n", string(data))
+}
+
+func GetDefaultLanListeningAddress(currentAddress string) string {
+	if len(defaultListeningAddress) > 0 {
+		return defaultListeningAddress
+	}
+
+	if !strings.HasPrefix(currentAddress, "0.") && !strings.HasPrefix(currentAddress, "127.") {
+		return currentAddress
+	}
+
+	log.Printf("WARNING: Detected invalid listening ip address, trying to autodetect the default route...\n")
+
+	defaultIP, err := gateway.DiscoverInterface()
+	if err != nil {
+		panic(fmt.Sprint("PANIC: Could not discover default lan address and the requested one is not suitable, error: %v\n", err))
+		return currentAddress
+	}
+
+	defaultListeningAddress = defaultIP.String()
+	log.Printf("Found default ip address: %s\n", defaultListeningAddress)
+	return defaultListeningAddress
 }

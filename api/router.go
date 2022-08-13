@@ -37,6 +37,8 @@ func RunAPIServer(ctx context.Context, localMode bool) {
 	if localMode {
 		host = "127.0.0.1"
 		log.Printf("Listening address for local api server set to 127.0.0.1")
+	} else {
+		host = shared.GetDefaultLanListeningAddress(host)
 	}
 	apiPort := shared.QuicConfiguration.GatewayAPIPort
 
