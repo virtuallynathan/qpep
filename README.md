@@ -14,7 +14,7 @@ Following here are instructions for manual building the additional parts on wind
 ### Main module
 For building the qpep package you'll need:
 - Go 1.16.x
-- A C/C++ complier compatible with CGO eg. [MinGW64](https://www.mingw-w64.org/). Specifically, download [this](ttps://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/8.1.0/threads-posix/seh/), extract the files, and add the "bin" directory to the PATH.
+- A C/C++ complier compatible with CGO eg. [MinGW64](https://www.mingw-w64.org/). Specifically, download [this](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/8.1.0/threads-posix/seh/x86_64-8.1.0-release-posix-seh-rt_v6-rev0.7z), extract the files, and add the "bin" directory to the PATH.
 
 After setting the go and c compiler in the PATH, be sure to also check that `go env` reports that:
 - `CGO_ENABLED=1` 
@@ -24,7 +24,7 @@ After setting the go and c compiler in the PATH, be sure to also check that `go 
 After that the simple `go build` will build the executable.
 To run it, first copy the following files to the executable folder (if you are on 64 bit platform):
 - x64\WinDivert.dll
-- x64\WinDivert.sys
+- x64\WinDivert64.sys
 
 If instead your system is 32bits than copy:
 - x86\WinDivert.dll
