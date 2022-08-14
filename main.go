@@ -40,7 +40,7 @@ func main() {
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
-	go api.RunAPIServer(execContext, cancelExecutionFunc, true) // api server for local webgui
+	go api.RunServer(execContext, cancelExecutionFunc, true) // api server for local webgui
 
 	if shared.QuicConfiguration.ClientFlag {
 		runAsClient(execContext, cancelExecutionFunc)
