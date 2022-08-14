@@ -170,6 +170,8 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 
 	tcpConn.SetReadDeadline(time.Now().Add(timeOut))
 	tcpConn.SetWriteDeadline(time.Now().Add(timeOut))
+	stream.SetReadDeadline(time.Now().Add(timeOut))
+	stream.SetWriteDeadline(time.Now().Add(timeOut))
 
 	var streamWait sync.WaitGroup
 	streamWait.Add(2)
