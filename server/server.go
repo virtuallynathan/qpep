@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -121,37 +122,35 @@ func ListenQuicConn(quicSession quic.Session) {
 		}
 		log.Printf("Opening QUIC StreamID: %d\n", stream.StreamID())
 
-		go HandleQuicStream(stream)
+		go handleQuicStream(stream)
 	}
 }
 
-func HandleQuicStream(stream quic.Stream) {
+func handleQuicStream(stream quic.Stream) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("PANIC: %v\n", err)
 			debug.PrintStack()
 		}
 	}()
+
 	qpepHeader, err := shared.GetQpepHeader(stream)
 	if err != nil {
 		log.Printf("Unable to find QPEP header: %s\n", err)
 		return
 	}
-	go handleTCPConn(stream, qpepHeader)
-}
-
-func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("PANIC: %v\n", err)
-			debug.PrintStack()
-		}
-	}()
 
 	timeOut := time.Duration(10) * time.Second
 
-	log.Printf("Opening TCP Connection to %s, from %s\n", qpepHeader.DestAddr, qpepHeader.SourceAddr)
-	tcpConn, err := net.DialTimeout("tcp", qpepHeader.DestAddr.String(), timeOut)
+	// To support the server being behind a private NAT (external gateway address != local listening address)
+	// we dial the listening address when the connection is directed at the non-local API server
+	destAddress := qpepHeader.DestAddr.String()
+	if qpepHeader.DestAddr.Port == ServerConfiguration.APIPort {
+		destAddress = fmt.Sprintf("%s:%d", ServerConfiguration.ListenHost, ServerConfiguration.APIPort)
+	}
+	log.Printf("Opening TCP Connection to dest:%s, src:%s\n", destAddress, qpepHeader.SourceAddr)
+
+	tcpConn, err := net.DialTimeout("tcp", destAddress, timeOut)
 	if err != nil {
 		log.Printf("Unable to open TCP connection from QPEP stream: %s\n", err)
 		return
@@ -238,7 +237,7 @@ func handleTCPConn(stream quic.Stream, qpepHeader shared.QpepHeader) {
 	go streamQUICtoTCP(tcpConn.(*net.TCPConn), stream)
 	go streamTCPtoQUIC(stream, tcpConn.(*net.TCPConn))
 
-	//we exit (and close the TCP connection) once both streams are done copying
+	//we exit (and close the TCP connection) once both streams are done copying or timeout
 	streamWait.Wait()
 
 	stream.CancelRead(0)
