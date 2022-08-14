@@ -31,7 +31,7 @@ const (
 	API_STATS_DATA_SRV_PATH string = "/statistics/data/:addr"
 )
 
-func RunAPIServer(ctx context.Context, localMode bool) {
+func RunServer(ctx context.Context, cancel context.CancelFunc, localMode bool) {
 	// update configuration from flags
 	host := shared.QuicConfiguration.ListenIP
 	if localMode {
@@ -53,7 +53,20 @@ func RunAPIServer(ctx context.Context, localMode bool) {
 	}
 
 	srv := NewServer(listenAddr, rtr, ctx)
-	log.Println(srv.ListenAndServe())
+	go func() {
+		<-ctx.Done()
+		if srv != nil {
+			srv.Close()
+			srv = nil
+		}
+		cancel()
+	}()
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Printf("Error running API server: %v", err)
+	}
+	srv = nil
+	cancel()
 
 	log.Println("Closed API Server")
 }

@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+
+	"github.com/parvit/qpep/shared"
 )
 
 const (
@@ -95,13 +97,13 @@ func stopProcess(pid int) error {
 	proc, err := os.FindProcess(pid)
 	if err != nil {
 		ErrorMsg("Could not terminate client process: %v", err)
-		return ErrFailed
+		return shared.ErrFailed
 	}
 
 	log.Println("Waiting for client exe to terminate")
 	if err := proc.Signal(syscall.SIGINT); err != nil {
 		ErrorMsg("Could not terminate client process: %v", err)
-		return ErrFailed
+		return shared.ErrFailed
 	}
 
 	return nil

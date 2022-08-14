@@ -48,7 +48,7 @@ type ClientConfig struct {
 	Verbose           bool
 }
 
-func RunClient(ctx context.Context) {
+func RunClient(ctx context.Context, cancel context.CancelFunc) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("PANIC: %v", err)
@@ -57,18 +57,12 @@ func RunClient(ctx context.Context) {
 		if proxyListener != nil {
 			proxyListener.Close()
 		}
+		cancel()
 	}()
 	log.Println("Starting TCP-QPEP Tunnel Listener")
 
 	// update configuration from flags
-	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
-	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
-	ClientConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
-	ClientConfiguration.ListenHost = shared.GetDefaultLanListeningAddress(shared.QuicConfiguration.ListenIP)
-	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
-	ClientConfiguration.MultiStream = shared.QuicConfiguration.MultiStream
-	ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
-	ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
+	validateConfiguration()
 
 	log.Printf("Binding to TCP %s:%d", ClientConfiguration.ListenHost, ClientConfiguration.ListenPort)
 	var err error
@@ -286,4 +280,32 @@ func clientStatisticsUpdate(localAddr, apiAddr string, apiPort int, publicAddres
 		api.Statistics.SetCounter(value, stat.Name)
 	}
 	return true
+}
+
+func validateConfiguration() {
+	// copy values for client configuration
+	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
+	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
+	ClientConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
+	ClientConfiguration.ListenHost = shared.GetDefaultLanListeningAddress(shared.QuicConfiguration.ListenIP)
+	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
+	ClientConfiguration.MultiStream = shared.QuicConfiguration.MultiStream
+	ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads
+	ClientConfiguration.Verbose = shared.QuicConfiguration.Verbose
+
+	// panic if configuration is inconsistent
+	shared.AssertParamIP("gateway host", ClientConfiguration.GatewayHost)
+	shared.AssertParamPort("gateway port", ClientConfiguration.GatewayPort)
+
+	shared.AssertParamIP("listen host", ClientConfiguration.ListenHost)
+	shared.AssertParamPort("listen port", ClientConfiguration.ListenPort)
+
+	shared.AssertParamPort("api port", ClientConfiguration.APIPort)
+
+	shared.AssertParamHostsDifferent("hosts", ClientConfiguration.GatewayHost, ClientConfiguration.ListenHost)
+	shared.AssertParamPortsDifferent("ports", ClientConfiguration.GatewayPort,
+		ClientConfiguration.ListenPort, ClientConfiguration.APIPort)
+
+	// validation ok
+	log.Printf("Client configuration validation OK\n")
 }
