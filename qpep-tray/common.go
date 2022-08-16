@@ -213,7 +213,8 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("ERROR: %v\n", err)
+				log.Printf("PANIC: %v\n", err)
+				debug.PrintStack()
 			}
 		}()
 

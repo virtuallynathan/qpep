@@ -41,21 +41,20 @@ func RequestEcho(localAddress, address string, port int, toServer bool) *EchoRes
 	}
 	addr := fmt.Sprintf("http://%s:%d%s", address, port, prefix+API_ECHO_PATH)
 
-	log.Printf("local: %s - %s\n", localAddress, net.ParseIP(localAddress))
 	client := getClientForAPI(&net.TCPAddr{
 		IP: net.ParseIP(localAddress),
 	})
 
 	req, err := http.NewRequest("GET", addr, nil)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Printf("1 ERROR: %v\n", err)
 		return nil
 	}
 	req.Header.Set("User-Agent", runtime.GOOS)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Printf("2 ERROR: %v\n", err)
 		return nil
 	}
 	defer func() {
@@ -74,7 +73,7 @@ func RequestEcho(localAddress, address string, port int, toServer bool) *EchoRes
 	}
 
 	if scanner.Err() != nil {
-		log.Printf("ERROR: %v\n", scanner.Err())
+		log.Printf("3 ERROR: %v\n", scanner.Err())
 		return nil
 	}
 
@@ -85,7 +84,7 @@ func RequestEcho(localAddress, address string, port int, toServer bool) *EchoRes
 	respData := &EchoResponse{}
 	jsonErr := json.Unmarshal(str.Bytes(), &respData)
 	if jsonErr != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Printf("4 ERROR: %v\n", jsonErr)
 		return nil
 	}
 
@@ -103,7 +102,7 @@ func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddre
 
 	resp, err := client.Get(addr)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Printf("5 ERROR: %v\n", err)
 		return nil
 	}
 	defer func() {
@@ -122,7 +121,7 @@ func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddre
 	}
 
 	if scanner.Err() != nil {
-		log.Printf("ERROR: %v\n", scanner.Err())
+		log.Printf("6 ERROR: %v\n", scanner.Err())
 		return nil
 	}
 
@@ -133,7 +132,7 @@ func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddre
 	respData := &StatusReponse{}
 	jsonErr := json.Unmarshal(str.Bytes(), &respData)
 	if jsonErr != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Printf("7 ERROR: %v\n", jsonErr)
 		return nil
 	}
 
@@ -150,7 +149,7 @@ func RequestStatistics(localAddress, gatewayAddress string, apiPort int, publicA
 
 	resp, err := client.Get(addr)
 	if err != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Printf("8 ERROR: %v\n", err)
 		return nil
 	}
 	defer func() {
@@ -169,7 +168,7 @@ func RequestStatistics(localAddress, gatewayAddress string, apiPort int, publicA
 	}
 
 	if scanner.Err() != nil {
-		log.Printf("ERROR: %v\n", scanner.Err())
+		log.Printf("9 ERROR: %v\n", scanner.Err())
 		return nil
 	}
 
@@ -180,7 +179,7 @@ func RequestStatistics(localAddress, gatewayAddress string, apiPort int, publicA
 	respData := &StatsInfoReponse{}
 	jsonErr := json.Unmarshal(str.Bytes(), &respData)
 	if jsonErr != nil {
-		log.Printf("ERROR: %v\n", err)
+		log.Printf("10 ERROR: %v\n", jsonErr)
 		return nil
 	}
 
