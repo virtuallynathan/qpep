@@ -245,11 +245,13 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 					flip = 0
 				}
 
+				// Inverse of what one might expect
+				// Client -> Server: url must contain "/server", so flag true
+				// Server -> Server: url must contain "/server", so flag true
+				// All else false so url contains "/client"
+				var clientToServer = (serverCmd == nil && clientCmd != nil) || (serverCmd != nil && clientCmd == nil)
+
 				if state != stateConnected {
-					// Inverse of what one might expect
-					// Client -> Server: url must contain "/server", so flag true
-					// All else false so url contains "/client"
-					var clientToServer = (serverCmd == nil && clientCmd != nil)
 					var resp = api.RequestEcho(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, clientToServer)
 					if resp == nil {
 						systray.SetTemplateIcon(animIcons[flip], animIcons[flip])
@@ -262,7 +264,7 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 				}
 
 				if len(pubAddress) > 0 {
-					var status = api.RequestStatus(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, pubAddress)
+					var status = api.RequestStatus(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, pubAddress, clientToServer)
 					if status == nil {
 						log.Printf("Server Status: no / invalid response\n")
 					} else if status.ConnectionCounter < 0 {

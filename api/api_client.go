@@ -92,8 +92,12 @@ func RequestEcho(localAddress, address string, port int, toServer bool) *EchoRes
 	return respData
 }
 
-func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddress string) *StatusReponse {
-	apiPath := strings.Replace(API_PREFIX_CLIENT+API_STATUS_PATH, ":addr", publicAddress, -1)
+func RequestStatus(localAddress, gatewayAddress string, apiPort int, publicAddress string, toServer bool) *StatusReponse {
+	prefix := API_PREFIX_CLIENT
+	if toServer {
+		prefix = API_PREFIX_SERVER
+	}
+	apiPath := strings.Replace(prefix+API_STATUS_PATH, ":addr", publicAddress, -1)
 	addr := fmt.Sprintf("http://%s:%d%s", gatewayAddress, apiPort, apiPath)
 
 	client := getClientForAPI(&net.TCPAddr{
