@@ -48,6 +48,7 @@ func onReady() {
 	systray.SetTitle("QPep TCP accelerator")
 	systray.SetTooltip("QPep TCP accelerator")
 
+	mStatus := systray.AddMenuItem("Status Interface", "Open the status web gui")
 	mConfig := systray.AddMenuItem("Edit Configuration", "Open configuration for next client / server executions")
 	mConfigRefresh := systray.AddMenuItem("Reload Configuration", "Reload configuration from disk and restart the service")
 	systray.AddSeparator()
@@ -58,6 +59,7 @@ func onReady() {
 
 	// Sets the icon of the menu items
 	mQuit.SetIcon(icons.ExitIconData)
+	mStatus.SetIcon(icons.ConfigIconData)
 	mConfig.SetIcon(icons.ConfigIconData)
 	mConfigRefresh.SetIcon(icons.RefreshIconData)
 
@@ -81,6 +83,10 @@ func onReady() {
 			select {
 			case <-mConfig.ClickedCh:
 				openConfigurationWithOSEditor()
+				continue
+
+			case <-mStatus.ClickedCh:
+				openWebguiWithOSBrowser(mClientActive, mServerActive)
 				continue
 
 			case <-mConfigRefresh.ClickedCh:
@@ -207,7 +213,8 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("ERROR: %v\n", err)
+				log.Printf("PANIC: %v\n", err)
+				debug.PrintStack()
 			}
 		}()
 
@@ -238,8 +245,14 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 					flip = 0
 				}
 
+				// Inverse of what one might expect
+				// Client -> Server: url must contain "/server", so flag true
+				// Server -> Server: url must contain "/server", so flag true
+				// All else false so url contains "/client"
+				var clientToServer = (serverCmd == nil && clientCmd != nil) || (serverCmd != nil && clientCmd == nil)
+
 				if state != stateConnected {
-					var resp = api.RequestEcho(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort)
+					var resp = api.RequestEcho(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, clientToServer)
 					if resp == nil {
 						systray.SetTemplateIcon(animIcons[flip], animIcons[flip])
 						flip = (flip + 1) % 2
@@ -251,7 +264,7 @@ func startConnectionStatusWatchdog() (context.Context, context.CancelFunc) {
 				}
 
 				if len(pubAddress) > 0 {
-					var status = api.RequestStatus(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, pubAddress)
+					var status = api.RequestStatus(qpepConfig.ListenHost, qpepConfig.GatewayHost, qpepConfig.GatewayAPIPort, pubAddress, clientToServer)
 					if status == nil {
 						log.Printf("Server Status: no / invalid response\n")
 					} else if status.ConnectionCounter < 0 {

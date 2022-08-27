@@ -1,0 +1,11 @@
+<template>
+  <div id="gd"></div>
+  <div id="maxtime-container">
+    <p>
+      <input type="range" value.bind="currentMax" id="maxtime-slider" min="10" max="300" value="60" step="10" />
+    </p>
+    <div class="mdl-tooltip" data-mdl-for="maxtime-slider">
+        Maximum time to track: ${currentMax} sec.
+    </div>
+  </div>
+</template>

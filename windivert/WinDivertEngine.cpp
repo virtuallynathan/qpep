@@ -1,4 +1,9 @@
 
+// definition for local dev
+// #ifndef WIN32
+// #define WIN32 
+// #endif
+
 #ifdef WIN32
 
 extern "C" {

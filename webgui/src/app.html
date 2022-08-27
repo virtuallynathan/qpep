@@ -1,0 +1,41 @@
+<template>
+  <require from="./toast"></require>
+  <toast></toast>
+
+  <!-- Simple header with fixed tabs. -->
+  <div
+    class="mdl-layout mdl-js-layout mdl-layout--fixed-header mdl-layout--fixed-tabs"
+  >
+    <header class="mdl-layout__header">
+      <!-- Tabs -->
+      <div class="mdl-layout__tab-bar mdl-js-ripple-effect">
+        <a
+          repeat.for="mod of modules"
+          id="fixed-tab-${mod}"
+          href="#fixed-tab-${mod}"
+          class="mdl-layout__tab"
+          >${mod}</a
+        >
+      </div>
+    </header>
+
+    <main class="mdl-layout__content">
+      <require from="./loader"></require>
+      <loader></loader>
+
+      <router-view></router-view>
+    </main>
+
+    <footer class="mdl-mini-footer">
+      <div class="mdl-mini-footer__left-section">
+        <div class="mdl-logo">${title}</div>
+      </div>
+      <div class="mdl-mini-footer__right-section">
+        <ul class="mdl-mini-footer__link-list">
+          <li>Client version: ${clientVersion}</li>
+          <li>Server version: ${serverVersion}</li>
+        </ul>
+      </div>
+    </footer>
+  </div>
+</template>

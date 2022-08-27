@@ -77,14 +77,28 @@ func RunClient(ctx context.Context, cancel context.CancelFunc) {
 
 	go ListenTCPConn()
 
+	var connected = false
+	var publicAddress = ""
+
 	for {
 		select {
 		case <-ctx.Done():
 			proxyListener.Close()
 			return
 		case <-time.After(1 * time.Second):
-			apiStatusCheck()
-			continue
+			localAddr := ClientConfiguration.ListenHost
+			apiAddr := ClientConfiguration.GatewayHost
+			apiPort := ClientConfiguration.APIPort
+			if !connected {
+				if ok, response := gatewayStatusCheck(localAddr, apiAddr, apiPort); ok {
+					connected = true
+					publicAddress = response.Address
+					log.Printf("Server returned public address %s\n", publicAddress)
+				}
+				continue
+			}
+
+			connected = clientStatisticsUpdate(localAddr, apiAddr, apiPort, publicAddress)
 		}
 	}
 }
@@ -242,15 +256,30 @@ func openQuicSession() (quic.Session, error) {
 	return nil, err
 }
 
-func apiStatusCheck() {
-	localAddr := ClientConfiguration.ListenHost
-	apiAddr := ClientConfiguration.GatewayHost
-	apiPort := ClientConfiguration.APIPort
-	if response := api.RequestEcho(localAddr, apiAddr, apiPort); response != nil {
+func gatewayStatusCheck(localAddr, apiAddr string, apiPort int) (bool, *api.EchoResponse) {
+	if response := api.RequestEcho(localAddr, apiAddr, apiPort, true); response != nil {
 		log.Printf("Gateway Echo OK\n")
-		return
+		return true, response
 	}
 	log.Printf("Gateway Echo FAILED\n")
+	return false, nil
+}
+
+func clientStatisticsUpdate(localAddr, apiAddr string, apiPort int, publicAddress string) bool {
+	response := api.RequestStatistics(localAddr, apiAddr, apiPort, publicAddress)
+	if response == nil {
+		log.Printf("Statistics update failed, resetting connection status\n")
+		return false
+	}
+
+	for _, stat := range response.Data {
+		value, err := strconv.ParseFloat(stat.Value, 64)
+		if err != nil {
+			continue
+		}
+		api.Statistics.SetCounter(value, stat.Name)
+	}
+	return true
 }
 
 func validateConfiguration() {
@@ -258,7 +287,7 @@ func validateConfiguration() {
 	ClientConfiguration.GatewayHost = shared.QuicConfiguration.GatewayIP
 	ClientConfiguration.GatewayPort = shared.QuicConfiguration.GatewayPort
 	ClientConfiguration.APIPort = shared.QuicConfiguration.GatewayAPIPort
-	ClientConfiguration.ListenHost = shared.QuicConfiguration.ListenIP
+	ClientConfiguration.ListenHost = shared.GetDefaultLanListeningAddress(shared.QuicConfiguration.ListenIP)
 	ClientConfiguration.ListenPort = shared.QuicConfiguration.ListenPort
 	ClientConfiguration.MultiStream = shared.QuicConfiguration.MultiStream
 	ClientConfiguration.WinDivertThreads = shared.QuicConfiguration.WinDivertThreads

@@ -34,9 +34,8 @@ func stopServer() error {
 	}
 
 	if err := stopServerProcess(); err != nil {
-		if ok := ConfirmMsg("Could not stop process gracefully (%v), do you want to force-terminate it?", err); !ok {
-			return err
-		}
+		log.Printf("Could not stop process gracefully (%v), will try to force-terminate it\n", err)
+
 		if err := serverCmd.Process.Kill(); err != nil {
 			ErrorMsg("Could not force-terminate process")
 			return err

@@ -1,0 +1,7 @@
+<template>
+  <div id="toast" class="mdl-snackbar ${type & signal:'update'}-msg ${shownClass & signal:'update'}">
+    <!-- Simple Tooltip -->
+    <div id="toast-icon" class="icon material-icons">${type & signal:'update'}</div>
+    <div class="mdl-snackbar__text">${msg & signal:'update'}</div>
+  </div>
+</template>

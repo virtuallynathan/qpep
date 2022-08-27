@@ -40,6 +40,8 @@ func main() {
 
 	execContext, cancelExecutionFunc := context.WithCancel(context.Background())
 
+	go api.RunServer(execContext, cancelExecutionFunc, true) // api server for local webgui
+
 	if shared.QuicConfiguration.ClientFlag {
 		runAsClient(execContext, cancelExecutionFunc)
 	} else {
@@ -97,5 +99,5 @@ func runAsClient(execContext context.Context, cancel context.CancelFunc) {
 func runAsServer(execContext context.Context, cancel context.CancelFunc) {
 	log.Println("Running Server")
 	go server.RunServer(execContext, cancel)
-	go api.RunServer(execContext, cancel)
+	go api.RunServer(execContext, cancel, false)
 }
