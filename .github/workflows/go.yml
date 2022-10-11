@@ -37,7 +37,7 @@ jobs:
       #run: go test -v ./...
       
     - name: Prepare
-      run: >
+      run: |
            MKDIR build\\  2> NUL;
            MKDIR build\\x64\\ 2> NUL;
            MKDIR build\\x86\\ 2> NUL;
