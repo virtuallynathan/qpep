@@ -1,4 +1,4 @@
-name: Go
+name: BuildAll
 
 on:
   workflow_dispatch:
@@ -45,17 +45,17 @@ jobs:
            COPY /Y LICENSE build\\LICENSE;
            set GOARCH=amd64;
            go clean -cache;
-           COPY /Y windivert\\x64\\* build\x64\;
+           COPY /Y windivert\\x64\\* build\\x64\\;
       shell: cmd
            
     - name: Build QPep
-    - run: |
+      run: |
            set CGO_ENABLED=1;
            go build -o build\\x64\\qpep.exe;
       shell: cmd
            
     - name: Build QPep Tray
-    - run: |
+      run: |
            ECHO [Build x64 tray icon];
            pushd qpep-tray;
            set CGO_ENABLED=0;
@@ -74,7 +74,7 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
 
     - name: Build QPep
-    - run: |
+      run: |
            msbuild installer\\installer.sln
       shell: cmd
            
