@@ -37,12 +37,13 @@ jobs:
       #run: go test -v ./...
       
     - name: Prepare
-    - run: >
-           MKDIR build\\  2> NUL 
-           MKDIR build\\x64\\ 2> NUL 
-           MKDIR build\\x86\\ 2> NUL 
-           COPY /Y windivert\\LICENSE build\\LICENSE.windivert
-           COPY /Y LICENSE build\\LICENSE
+      run: >
+           MKDIR build\\  2> NUL;
+           MKDIR build\\x64\\ 2> NUL;
+           MKDIR build\\x86\\ 2> NUL;
+           COPY /Y windivert\\LICENSE build\\LICENSE.windivert;
+           COPY /Y LICENSE build\\LICENSE;
+      shell: cmd
            
     # - name: Build QPep
     # - run: >
