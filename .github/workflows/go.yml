@@ -29,7 +29,49 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: 1.16
-    - name: Build
-      run: go build -v
-    - name: Test
-      run: go test -v ./...
+        
+    #- name: Build
+      #run: go build -v
+    #- name: Test
+      #run: go test -v ./...
+      
+    - name: Prepare
+    - run: >
+           MKDIR build\  2> NUL 
+           MKDIR build\x64\ 2> NUL 
+           MKDIR build\x86\ 2> NUL 
+           COPY /Y windivert\LICENSE build\LICENSE.windivert
+           COPY /Y LICENSE build\LICENSE
+           
+    - name: Build QPep
+    - run: >
+           set GOARCH=amd64
+           go clean -cache
+           ECHO [Copy dependencies x64]
+           COPY /Y windivert\x64\* build\x64\
+           ECHO [Build x64 server/client]
+           set CGO_ENABLED=1
+           go build -o build\x64\qpep.exe
+           
+    - name: Build QPep Tray
+    - run: >
+           ECHO [Build x64 tray icon]
+           pushd qpep-tray
+           set CGO_ENABLED=0
+           go build -ldflags -H=windowsgui -o ..\build\x64\qpep-tray.exe
+           popd
+           
+    - uses: actions/checkout@v2
+    - name: Install Wix
+      uses: actions/checkout@v2
+      with:
+        repository: fbarresi/wix
+        path: wix
+
+    - name: Install MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build QPep
+    - run: >
+           msbuild installer\installer.sln
+           
