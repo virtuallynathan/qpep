@@ -76,7 +76,6 @@ jobs:
     - name: Build QPep Installer
       run: |
            set PATH=${{ github.workspace }}\wix\tools;%PATH%;
-           dir ${{ github.workspace }}\wix\tools
-           msbuild installer\\installer.sln;
+           msbuild installer\\installer.sln
       shell: cmd
            
