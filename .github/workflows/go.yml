@@ -74,7 +74,9 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
       
     - name: Set PATH
-      run: set GITHUB_PATH=wix\tools\;%GITHUB_PATH%
+      run: |
+            set GITHUB_PATH=wix\\tools\\;%GITHUB_PATH%
+      shell: cmd
 
     - name: Build QPep Installer
       run: |
