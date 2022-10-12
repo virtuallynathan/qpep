@@ -56,11 +56,11 @@ jobs:
            
     - name: Build QPep Tray
       run: |
-           ECHO [Build x64 tray icon];
-           pushd qpep-tray;
+           ECHO [Build x64 tray icon]
+           pushd qpep-tray
            set CGO_ENABLED=0;
            go build -ldflags -H=windowsgui -o ..\\build\\x64\\qpep-tray.exe;
-           popd;
+           popd
       shell: cmd
            
     - uses: actions/checkout@v2
