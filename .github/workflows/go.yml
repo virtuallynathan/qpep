@@ -75,7 +75,7 @@ jobs:
       
     - name: Set PATH
       run: |
-            set PATH=wix\\tools\\;%PATH%
+            set PATH=${{ github.workspace }}\\wix\\tools\\;%PATH%
       shell: cmd
 
     - name: Build QPep Installer
