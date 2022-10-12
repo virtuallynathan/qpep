@@ -5,7 +5,7 @@
         <Media Id="1" Cabinet="qpep.cab" EmbedCab="yes" />
 
         <MajorUpgrade
-            DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit.">
+            DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
 
         <Icon Id="installer.ico" SourceFile="$(var.ProjectDir)\installer.ico" />
         <Icon Id="applications_internet.ico" SourceFile="$(var.ProjectDir)\applications-internet.ico" />
