@@ -78,4 +78,8 @@ jobs:
            set PATH=${{ github.workspace }}\wix\tools;%PATH%;
            msbuild installer\\installer.sln
       shell: cmd
-           
+   
+    - uses: actions/upload-artifact@v3
+      with:
+        name: Installer-${{ job.id }}
+        path: build\\installer.msi
