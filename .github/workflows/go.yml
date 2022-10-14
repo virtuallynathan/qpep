@@ -36,9 +36,18 @@ jobs:
     #- name: Test
       #run: go test -v ./...
       
+    - uses: actions/checkout@v2
+    - name: Install Wix
+      uses: actions/checkout@v2
+      with:
+        repository: fbarresi/wix
+        path: wix
+
+    - name: Install MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      
     - name: Prepare
       run: |
-           dir
            MKDIR build
            MKDIR build\x64
            MKDIR build\x86
@@ -47,7 +56,6 @@ jobs:
            set GOARCH=amd64
            go clean -cache
            COPY /Y windivert\x64\* build\x64
-           dir
       shell: cmd
            
     - name: Build QPep
@@ -58,37 +66,12 @@ jobs:
            
     - name: Build QPep Tray
       run: |
-           ECHO [Build x64 tray icon]
            pushd qpep-tray
            set CGO_ENABLED=0
            go build -ldflags -H=windowsgui -o ..\build\x64\qpep-tray.exe
            popd
       shell: cmd
            
-    - name: Check Dir
-      run: |
-           cd build
-           dir
-           cd ..
-      shell: cmd
-      
-    - uses: actions/checkout@v2
-    - name: Install Wix
-      uses: actions/checkout@v2
-      with:
-        repository: fbarresi/wix
-        path: wix
-
-    - name: Check Dir
-      run: |
-           cd build
-           dir
-           cd ..
-      shell: cmd
-      
-    - name: Install MSBuild
-      uses: microsoft/setup-msbuild@v1.1
-      
     - name: Check Dir
       run: |
            cd build
