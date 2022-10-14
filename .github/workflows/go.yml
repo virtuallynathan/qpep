@@ -2,6 +2,15 @@ name: BuildAll
 
 on:
   workflow_dispatch:
+    inputs:
+      run_tests:
+            description: 'Run tests'
+            required: true
+            default: 'false'
+      x86_version:
+            description: '32bits version'
+            required: true
+            default: 'false'
   push:
     branches: [ "main", "testing", "issue-10" ]
   pull_request:
@@ -24,6 +33,10 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    defaults:
+      run: 
+        shell: cmd
+    
     steps:
     - uses: actions/checkout@v3
     - name: Set up Go
@@ -31,6 +44,7 @@ jobs:
       with:
         go-version: 1.16
         
+    - if: ${{ github.event.inputs.run_tests == 'true' }}
     - name: Test
       run: go test -v ./...
       continue-on-error: true
@@ -57,14 +71,12 @@ jobs:
            set GOARCH=386
            go clean -cache
            COPY /Y windivert\x64\* build\x64
-      shell: cmd
            
     - name: Build QPep x64
       run: |
            set GOARCH=amd64
            set CGO_ENABLED=1
            go build -o build\x64\qpep.exe
-      shell: cmd
            
     - name: Build QPep Tray x64
       run: |
@@ -73,20 +85,21 @@ jobs:
            set CGO_ENABLED=0
            go build -ldflags -H=windowsgui -o ..\build\x86\qpep-tray.exe
            popd
-      shell: cmd
            
+    - if: ${{ github.event.inputs.x86_version == 'true' }}
     - name: Set up MinGW
       uses: egor-tensin/setup-mingw@v2
       with:
         platform: x86
         
+    - if: ${{ github.event.inputs.x86_version == 'true' }}
     - name: Build QPep x86
       run: |
            set GOARCH=386
            set CGO_ENABLED=1
            go build -o build\x64\qpep.exe
-      shell: cmd
            
+    - if: ${{ github.event.inputs.x86_version == 'true' }}
     - name: Build QPep Tray x86
       run: |
            pushd qpep-tray
@@ -94,13 +107,11 @@ jobs:
            set CGO_ENABLED=0
            go build -ldflags -H=windowsgui -o ..\build\x86\qpep-tray.exe
            popd
-      shell: cmd
       
     - name: Build QPep Installer
       run: |
            set PATH=${{ github.workspace }}\wix\tools;%PATH%
            msbuild installer\installer.sln
-      shell: cmd
    
     - uses: actions/upload-artifact@v3
       with:
