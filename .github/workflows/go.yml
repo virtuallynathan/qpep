@@ -73,6 +73,13 @@ jobs:
     - name: Install MSBuild
       uses: microsoft/setup-msbuild@v1.1
       
+    - name: Check Dir
+      run: |
+           cd build
+           dir
+           cd ..
+      shell: cmd
+      
     - name: Build QPep Installer
       run: |
            set PATH=${{ github.workspace }}\wix\tools;%PATH%;
