@@ -1,4 +1,4 @@
-name: BuildAll-${{ github.run_id }}
+name: BuildAll
 
 on:
   workflow_dispatch:
