@@ -75,6 +75,11 @@ jobs:
            popd
       shell: cmd
            
+    - name: Set up MinGW
+      uses: egor-tensin/setup-mingw@v2
+      with:
+        platform: x86
+        
     - name: Build QPep x86
       run: |
            set GOARCH=386
