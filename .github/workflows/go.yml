@@ -45,7 +45,7 @@ jobs:
         go-version: 1.16
         
     - if: ${{ github.event.inputs.run_tests == 'true' }}
-    - name: Test
+      name: Test
       run: go test -v ./...
       continue-on-error: true
       
@@ -87,20 +87,20 @@ jobs:
            popd
            
     - if: ${{ github.event.inputs.x86_version == 'true' }}
-    - name: Set up MinGW
+      name: Set up MinGW
       uses: egor-tensin/setup-mingw@v2
       with:
         platform: x86
         
     - if: ${{ github.event.inputs.x86_version == 'true' }}
-    - name: Build QPep x86
+      name: Build QPep x86
       run: |
            set GOARCH=386
            set CGO_ENABLED=1
            go build -o build\x64\qpep.exe
            
     - if: ${{ github.event.inputs.x86_version == 'true' }}
-    - name: Build QPep Tray x86
+      name: Build QPep Tray x86
       run: |
            pushd qpep-tray
            set GOARCH=386
