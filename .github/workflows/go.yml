@@ -40,20 +40,20 @@ jobs:
       run: |
            dir
            MKDIR build
-           MKDIR build\\x64
-           MKDIR build\\x86
-           COPY /Y windivert\\LICENSE build\\LICENSE.windivert
-           COPY /Y LICENSE build\\LICENSE
+           MKDIR build\x64
+           MKDIR build\x86
+           COPY /Y windivert\LICENSE build\LICENSE.windivert
+           COPY /Y LICENSE build\LICENSE
            set GOARCH=amd64
            go clean -cache
-           COPY /Y windivert\\x64\\* build\\x64
+           COPY /Y windivert\x64\* build\x64
            dir
       shell: cmd
            
     - name: Build QPep
       run: |
            set CGO_ENABLED=1
-           go build -o build\\x64\\qpep.exe
+           go build -o build\x64\qpep.exe
       shell: cmd
            
     - name: Build QPep Tray
@@ -61,10 +61,17 @@ jobs:
            ECHO [Build x64 tray icon]
            pushd qpep-tray
            set CGO_ENABLED=0
-           go build -ldflags -H=windowsgui -o ..\\build\\x64\\qpep-tray.exe
+           go build -ldflags -H=windowsgui -o ..\build\x64\qpep-tray.exe
            popd
       shell: cmd
            
+    - name: Check Dir
+      run: |
+           cd build
+           dir
+           cd ..
+      shell: cmd
+      
     - uses: actions/checkout@v2
     - name: Install Wix
       uses: actions/checkout@v2
@@ -72,6 +79,13 @@ jobs:
         repository: fbarresi/wix
         path: wix
 
+    - name: Check Dir
+      run: |
+           cd build
+           dir
+           cd ..
+      shell: cmd
+      
     - name: Install MSBuild
       uses: microsoft/setup-msbuild@v1.1
       
@@ -85,10 +99,10 @@ jobs:
     - name: Build QPep Installer
       run: |
            set PATH=${{ github.workspace }}\wix\tools;%PATH%
-           msbuild installer\\installer.sln
+           msbuild installer\installer.sln
       shell: cmd
    
     - uses: actions/upload-artifact@v3
       with:
         name: Installer-${{ job.id }}
-        path: build\\installer.msi
+        path: build\installer.msi
