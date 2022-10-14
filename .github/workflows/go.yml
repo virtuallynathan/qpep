@@ -1,9 +1,9 @@
-name: BuildAll
+name: BuildAll-${{ github.run_id }}
 
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "issue-10" ]
+    branches: [ "main", "testing", "issue-10" ]
   pull_request:
     branches: [ "main" ]
 
@@ -31,10 +31,9 @@ jobs:
       with:
         go-version: 1.16
         
-    #- name: Build
-      #run: go build -v
-    #- name: Test
-      #run: go test -v ./...
+    - name: Test
+      run: go test -v ./...
+      continue-on-error: true
       
     - uses: actions/checkout@v2
     - name: Install Wix
@@ -55,28 +54,41 @@ jobs:
            COPY /Y LICENSE build\LICENSE
            set GOARCH=amd64
            go clean -cache
+           set GOARCH=386
+           go clean -cache
            COPY /Y windivert\x64\* build\x64
       shell: cmd
            
-    - name: Build QPep
+    - name: Build QPep x64
       run: |
+           set GOARCH=amd64
            set CGO_ENABLED=1
            go build -o build\x64\qpep.exe
       shell: cmd
            
-    - name: Build QPep Tray
+    - name: Build QPep Tray x64
       run: |
            pushd qpep-tray
+           set GOARCH=amd64
            set CGO_ENABLED=0
-           go build -ldflags -H=windowsgui -o ..\build\x64\qpep-tray.exe
+           go build -ldflags -H=windowsgui -o ..\build\x86\qpep-tray.exe
            popd
       shell: cmd
            
-    - name: Check Dir
+    - name: Build QPep x86
       run: |
-           cd build
-           dir
-           cd ..
+           set GOARCH=386
+           set CGO_ENABLED=1
+           go build -o build\x64\qpep.exe
+      shell: cmd
+           
+    - name: Build QPep Tray x86
+      run: |
+           pushd qpep-tray
+           set GOARCH=386
+           set CGO_ENABLED=0
+           go build -ldflags -H=windowsgui -o ..\build\x86\qpep-tray.exe
+           popd
       shell: cmd
       
     - name: Build QPep Installer
@@ -87,5 +99,5 @@ jobs:
    
     - uses: actions/upload-artifact@v3
       with:
-        name: Installer-${{ job.id }}
+        name: QPep-${{ github.job }}-${{ github.run_id }}
         path: build\installer.msi
