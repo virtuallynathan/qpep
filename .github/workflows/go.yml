@@ -38,28 +38,28 @@ jobs:
       
     - name: Prepare
       run: |
-           MKDIR build\\  2> NUL;
-           MKDIR build\\x64\\ 2> NUL;
-           MKDIR build\\x86\\ 2> NUL;
-           COPY /Y windivert\\LICENSE build\\LICENSE.windivert;
-           COPY /Y LICENSE build\\LICENSE;
-           set GOARCH=amd64;
-           go clean -cache;
-           COPY /Y windivert\\x64\\* build\\x64\\;
+           MKDIR build
+           MKDIR build\\x64
+           MKDIR build\\x86
+           COPY /Y windivert\\LICENSE build\\LICENSE.windivert
+           COPY /Y LICENSE build\\LICENSE
+           set GOARCH=amd64
+           go clean -cache
+           COPY /Y windivert\\x64\\* build\\x64
       shell: cmd
            
     - name: Build QPep
       run: |
-           set CGO_ENABLED=1;
-           go build -o build\\x64\\qpep.exe;
+           set CGO_ENABLED=1
+           go build -o build\\x64\\qpep.exe
       shell: cmd
            
     - name: Build QPep Tray
       run: |
            ECHO [Build x64 tray icon]
            pushd qpep-tray
-           set CGO_ENABLED=0;
-           go build -ldflags -H=windowsgui -o ..\\build\\x64\\qpep-tray.exe;
+           set CGO_ENABLED=0
+           go build -ldflags -H=windowsgui -o ..\\build\\x64\\qpep-tray.exe
            popd
       shell: cmd
            
@@ -82,7 +82,7 @@ jobs:
       
     - name: Build QPep Installer
       run: |
-           set PATH=${{ github.workspace }}\wix\tools;%PATH%;
+           set PATH=${{ github.workspace }}\wix\tools;%PATH%
            msbuild installer\\installer.sln
       shell: cmd
    
