@@ -1,0 +1,86 @@
+name: AutoBuild
+
+on:
+  push:
+    branches: [ "main", "testing-*", "issue-10" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run: 
+        shell: bash
+        
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.16
+        
+    - name: Prepare
+      run: mkdir build
+        
+    - name: Build x64
+      run: |
+        set GOARCH=amd64
+        set GOOS=linux
+        set CGO_ENABLED=1
+        go clean -cache
+        go build -v -o build/qpep
+      
+    - if: ${{ github.event.inputs.run_tests == 'true' }}
+      name: Test
+      run: go test -v ./...
+      continue-on-error: true
+      
+    - uses: actions/upload-artifact@v3
+      with:
+        name: qpep_linux_b${{ github.run_id }}
+        path: build/
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run: 
+        shell: cmd
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.16
+        
+    - name: Test
+      run: go test -v ./...
+      continue-on-error: true
+      
+    - name: Prepare
+      run: |
+           MKDIR build
+           set GOARCH=amd64
+           go clean -cache
+           COPY /Y windivert\x64\* build\
+           
+    - name: Build QPep x64
+      run: |
+           set GOARCH=amd64
+           set CGO_ENABLED=1
+           go build -o build\qpep.exe
+           
+    - name: Build QPep Tray x64
+      run: |
+           pushd qpep-tray
+           set GOARCH=amd64
+           set GOOS=windows
+           set CGO_ENABLED=0
+           go build -ldflags -H=windowsgui -o ..\build\qpep-tray.exe
+           popd
+              
+    - uses: actions/upload-artifact@v3
+      with:
+        name: qpep-windows-${{ github.run_id }}
+        path: build\
