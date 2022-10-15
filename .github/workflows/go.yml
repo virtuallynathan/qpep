@@ -3,6 +3,14 @@ name: BuildAll
 on:
   workflow_dispatch:
     inputs:
+      platform_win:
+            description: 'Platform-Windows'
+            required: true
+            default: 'true'
+      platform_linux:
+            description: 'Platform-Linux'
+            required: true
+            default: 'false'
       run_tests:
             description: 'Run tests'
             required: true
@@ -12,26 +20,41 @@ on:
             required: true
             default: 'false'
   push:
-    branches: [ "main", "testing", "issue-10" ]
+    branches: [ "main", "testing-*", "issue-10" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
 
-#  build-linux:
-#    runs-on: ubuntu-latest
-#    steps:
-#    - uses: actions/checkout@v3
-#    - name: Set up Go
-#      uses: actions/setup-go@v3
-#      with:
-#        go-version: 1.16
-#    - name: Build
-#      run: go build -v ./...
-#    - name: Test
-#      run: go test -v ./...
+  build-linux:
+    if: ${{ github.event.inputs.platform_linux == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.16
+        
+    - name: Build x64
+      run: |
+        set GOARCH=amd64
+        set GOOS=linux
+        set CGO_ENABLED=1
+        go clean -cache
+        go build -v ./...
+      
+    - if: ${{ github.event.inputs.run_tests == 'true' }}
+      name: Test
+      run: go test -v ./...
+      
+    - uses: actions/upload-artifact@v3
+      with:
+        name: QPep-Linux-${{ github.run_id }}
+        path: qpep
 
   build-windows:
+    if: ${{ github.event.inputs.platform_win == 'true' }}
     runs-on: windows-latest
     defaults:
       run: 
@@ -82,6 +105,7 @@ jobs:
       run: |
            pushd qpep-tray
            set GOARCH=amd64
+           set GOOS=windows
            set CGO_ENABLED=0
            go build -ldflags -H=windowsgui -o ..\build\x86\qpep-tray.exe
            popd
@@ -96,6 +120,7 @@ jobs:
       name: Build QPep x86
       run: |
            set GOARCH=386
+           set GOOS=windows
            set CGO_ENABLED=1
            go build -o build\x64\qpep.exe
            
@@ -104,6 +129,7 @@ jobs:
       run: |
            pushd qpep-tray
            set GOARCH=386
+           set GOOS=windows
            set CGO_ENABLED=0
            go build -ldflags -H=windowsgui -o ..\build\x86\qpep-tray.exe
            popd
@@ -115,5 +141,5 @@ jobs:
    
     - uses: actions/upload-artifact@v3
       with:
-        name: QPep-${{ github.job }}-${{ github.run_id }}
+        name: QPep-Windows-${{ github.run_id }}
         path: build\installer.msi
