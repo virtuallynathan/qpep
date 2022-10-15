@@ -27,7 +27,7 @@ on:
 jobs:
 
   build-linux:
-    if: ${{ github.event.inputs.platform_linux == 'true' }}
+    if: github.event.inputs.platform_linux == 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -54,7 +54,7 @@ jobs:
         path: qpep
 
   build-windows:
-    if: ${{ github.event.inputs.platform_win == 'true' }}
+    if: github.event.inputs.platform_win == 'true'
     runs-on: windows-latest
     defaults:
       run: 
