@@ -3,18 +3,10 @@ name: BuildAll
 on:
   workflow_dispatch:
     inputs:
-      platform_win:
-            description: 'Platform-Windows'
-            required: true
-            default: 'true'
-      platform_linux:
-            description: 'Platform-Linux'
-            required: true
-            default: 'false'
       run_tests:
             description: 'Run tests'
             required: true
-            default: 'false'
+            default: 'true'
       x86_version:
             description: '32bits version'
             required: true
@@ -27,7 +19,6 @@ on:
 jobs:
 
   build-linux:
-    if: github.event.inputs.platform_linux == 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -36,25 +27,28 @@ jobs:
       with:
         go-version: 1.16
         
+    - name: Prepare
+      run: mkdir build
+        
     - name: Build x64
       run: |
         set GOARCH=amd64
         set GOOS=linux
         set CGO_ENABLED=1
         go clean -cache
-        go build -v ./...
+        go build -v -o build/qpep
       
     - if: ${{ github.event.inputs.run_tests == 'true' }}
       name: Test
       run: go test -v ./...
+      continue-on-error: true
       
     - uses: actions/upload-artifact@v3
       with:
         name: QPep-Linux-${{ github.run_id }}
-        path: qpep
+        path: build/qpep
 
   build-windows:
-    if: github.event.inputs.platform_win == 'true'
     runs-on: windows-latest
     defaults:
       run: 
